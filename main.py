@@ -3,6 +3,8 @@ from scenes import MainMenu, Level
 
 
 class Game():
+    """Главный класс игры, ответственный за управление сценами"""
+
     def __init__(self, width: int, height: int, fps=60):
         pygame.init()
         self.SCREEN_SIZE = (width, height)
@@ -14,7 +16,7 @@ class Game():
         self.main_menu = MainMenu(self.display, self.FPS)
         self.level = Level(self.display, self.FPS)
 
-    def redraw(self, win):
+    def redraw(self, win: pygame.Surface):
         pass
 
     def handle_events(self):
@@ -27,6 +29,7 @@ class Game():
                 self.handle_keyboard_events(event)
 
     def handle_keyboard_events(self, event):
+        """метод для отрисовки сцены в зависимости от нажатой кнопки"""
         if event.key == pygame.K_SPACE:
             self.main_menu.show()
         if event.key == pygame.K_RETURN:
