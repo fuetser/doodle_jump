@@ -1,4 +1,4 @@
-from core import GameScene
+from core import GameScene, Group
 from main_character import MainCharacter
 from platforms import Platform
 import pygame
@@ -11,8 +11,8 @@ class Level(GameScene):
     def __init__(self, display: pygame.Surface, fps=60):
         super(Level, self).__init__(display, fps)
         self.background = pygame.image.load("assets/background.png")
-        self.main_character = MainCharacter(
-            200, 100, "assets/base_character72.png")
+        self.main_character = MainCharacter(200, 100, 
+            "assets/base_character72.png", self.size, convert_alpha=True)
         # прямоугольник для проверки упал игрок вниз или нет
         self.bottom_rect = pygame.Rect(
             0, display.get_height() - 2, display.get_width(), 2)
@@ -23,60 +23,46 @@ class Level(GameScene):
         self.scroll_down = False
         self.move_right = False
         self.move_left = False
-        self.parallax_coefficient = 0.25
+        self.parallax_coefficient = 0.1
         # количество платформ в сцене
         self.platforms_amount = 10
         # список платформ на экране
-        self.platforms = []
-        self.spawn_platforms()
+        self.platforms = Group()
 
     def spawn_platforms(self):
         """метод для генерации новых платформ в рандомных координатах"""
         for _ in range(self.platforms_amount - len(self.platforms)):
-            self.platforms.append(Platform(
-                *[random.randint(0, 500) for _ in range(2)], "assets/platform72.png"))
+            x = random.randint(0, self.size[0] - 100)
+            y = random.randint(0, self.size[1] - 100)
+            platform = Platform(
+                x, y, "assets/platform72.png", self.size, convert_alpha=True)
+            self.platforms.add(platform)
 
     def check_collisions(self):
-        """метод для обработки всех столкновений (надо будет разбить на отдельные)"""
+        """метод для обработки всех столкновений"""
         for platform in self.platforms:
-            # проверка столкновений игрока и платформ
             if self.main_character.collides(platform.rect):
-                if self.main_character.y > platform.y:
-                    # если игрок находится над платформой, то он останавливается
-                    # на ней и не падает дяльше
-                    self.main_character.y = platform.rect.top - self.main_character.height
-                # прыжок игрока после касания платформы
+                if self.scroll_down:
+                    self.main_character.set_pos((
+                        self.main_character.x,
+                        platform.y - self.main_character.width))
                 self.main_character.jump()
-                # сдвиг фона вниз вместе с платформами
                 self.scroll_down = True
-        # проверка столкновения с низом экрана
         if self.main_character.collides(self.bottom_rect):
             self.main_character.v_momentum = -10
             # self.close()
             print("You lose")
-
-    def scroll_platforms(self, offset: int):
-        """метод для сдвига всех платформ вниз"""
-        if self.scroll_down:
-            for platform in self.platforms:
-                platform.scroll(offset)
-
-    def delete_platforms(self):
-        """метод для удаления платформ, которые выходя за границы экрана"""
-        for platform in self.platforms:
-            if platform.pos[1] > 600:
-                self.platforms.remove(platform)
 
     def redraw(self, win):
         """метод для отрисовки сцены"""
         win.fill((255, 255, 255))
         win.blit(self.background, self.bg_pos)
         self.main_character.draw(win)
-        for platform in self.platforms:
-            platform.draw(win)
+        self.platforms.draw(win)
 
     def handle_events(self):
         """метод для обработки событий сцены"""
+        pygame.display.set_caption(str(self.clock.get_fps()))
         self.spawn_platforms()
         # остановка сдвига вниз, когда игрок начинает падать вниз
         if self.main_character.v_momentum > 0:
@@ -90,11 +76,18 @@ class Level(GameScene):
                 self.handle_keyboard_events(event)
             if event.type == pygame.KEYUP:
                 self.handle_keyboard_events(event, state=False)
-        self.scroll(3)
-        self.move_character(8)
+        self.main_character.update()
+        self.handle_movement()
         self.check_collisions()
-        self.scroll_platforms(3)
-        self.delete_platforms()
+
+    def handle_movement(self):
+        """метод для обработки движения персонажа и платформ"""
+        # offset = (self.main_character.y + (self.size[1] - self.main_character.y)) // 52
+        offset = 3
+        self.scroll(offset * self.parallax_coefficient)
+        self.move_character(8)
+        if self.scroll_down:
+            self.platforms.update(offset)
 
     def handle_keyboard_events(self, event, state=True):
         """метод для обработки нажатий клавиатуры"""
