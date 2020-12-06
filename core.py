@@ -51,6 +51,14 @@ class GameObject(pygame.sprite.Sprite):
     def y(self) -> int:
         return self.rect.y
 
+    @property
+    def top(self) -> int:
+        return self.rect.top
+
+    @property
+    def bottom(self) -> int:
+        return self.rect.bottom
+
 
 class GameScene():
     """Абстрактный класс для игровой сцены/меню"""

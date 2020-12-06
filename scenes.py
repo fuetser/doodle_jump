@@ -11,8 +11,8 @@ class Level(GameScene):
     def __init__(self, display: pygame.Surface, fps=60):
         super(Level, self).__init__(display, fps)
         self.background = pygame.image.load("assets/background.png")
-        self.main_character = MainCharacter(200, 100, 
-            "assets/base_character72.png", self.size, convert_alpha=True)
+        self.main_character = MainCharacter(200, 100,
+                "assets/base_character72.png", self.size, convert_alpha=True)
         # прямоугольник для проверки упал игрок вниз или нет
         self.bottom_rect = pygame.Rect(
             0, display.get_height() - 2, display.get_width(), 2)
@@ -38,16 +38,17 @@ class Level(GameScene):
                 x, y, "assets/platform72.png", self.size, convert_alpha=True)
             self.platforms.add(platform)
 
+    def get_collisions(self, target, group):
+        return [sprite for sprite in group if target.collides(sprite.rect)]
+
     def check_collisions(self):
         """метод для обработки всех столкновений"""
-        for platform in self.platforms:
-            if self.main_character.collides(platform.rect):
-                if self.scroll_down:
-                    self.main_character.set_pos((
-                        self.main_character.x,
-                        platform.y - self.main_character.width))
-                self.main_character.jump()
-                self.scroll_down = True
+        for coll in self.get_collisions(self.main_character, self.platforms):
+            if self.main_character.bottom >= coll.top and self.main_character.bottom <= coll.bottom:
+                if self.main_character.v_momentum > 1:
+                    self.main_character.rect.bottom = coll.rect.top
+                    self.scroll_down = True
+                    self.main_character.jump()
         if self.main_character.collides(self.bottom_rect):
             self.main_character.v_momentum = -10
             # self.close()
@@ -82,12 +83,10 @@ class Level(GameScene):
 
     def handle_movement(self):
         """метод для обработки движения персонажа и платформ"""
-        # offset = (self.main_character.y + (self.size[1] - self.main_character.y)) // 52
-        offset = 3
-        self.scroll(offset * self.parallax_coefficient)
+        self.scroll(5 * self.parallax_coefficient)
         self.move_character(8)
         if self.scroll_down:
-            self.platforms.update(offset)
+            self.platforms.update(5)
 
     def handle_keyboard_events(self, event, state=True):
         """метод для обработки нажатий клавиатуры"""
