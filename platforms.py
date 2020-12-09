@@ -7,6 +7,7 @@ class Platform(GameObject):
 
     def __init__(self, x, y, image_path, screen_size, convert_alpha=False):
         super().__init__(x, y, image_path, screen_size, convert_alpha)
+        self.item = None
 
     def update(self, scroll: int):
         """метод для обновления спрайта"""
@@ -17,3 +18,10 @@ class Platform(GameObject):
     def scroll(self, offset: int):
         """метод для сдвига платформы вниз по экрану"""
         self.rect.y += offset
+
+    def add_item(self, item: pygame.sprite.Sprite):
+        """метод для добавления предмета к платформе"""
+        if isinstance(item, pygame.sprite.Sprite) and self.item is None:
+            self.item = item
+        else:
+            raise TypeError("Wrong argument supplied")

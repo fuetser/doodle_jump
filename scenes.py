@@ -1,4 +1,5 @@
 from core import GameScene, Group
+from items import Spring
 from main_character import MainCharacter
 from platforms import Platform
 import pygame
@@ -14,12 +15,11 @@ class Level(GameScene):
         self.main_character = MainCharacter(200, 100,
                 "assets/base_character72.png", self.size, convert_alpha=True)
         # прямоугольник для проверки упал игрок вниз или нет
-        self.bottom_rect = pygame.Rect(
-            0, display.get_height() - 2, display.get_width(), 2)
+        self.bottom_rect = pygame.Rect(0, self.size[0] - 2, self.size[1], 2)
         # координаты фона (нужны, чтобы сдвигать фон при движении вверх)
         self.bg_pos = [0, -2000]
+        self.offset = 0
         # переменные для обработки движения по нажатым кнопкам
-        self.scroll_up = False
         self.scroll_down = False
         self.move_right = False
         self.move_left = False
@@ -37,6 +37,11 @@ class Level(GameScene):
             platform = Platform(
                 x, y, "assets/platform72.png", self.size, convert_alpha=True)
             self.platforms.add(platform)
+            if random.random() < 0.1:
+                spring = Spring(x + 10, platform.top, "assets/spring16.png",
+                                self.size, convert_alpha=True)
+                platform.add_item(spring)
+                self.platforms.add(spring)
 
     def get_collisions(self, target, group):
         return [sprite for sprite in group if target.collides(sprite.rect)]
@@ -44,13 +49,10 @@ class Level(GameScene):
     def check_collisions(self):
         """метод для обработки всех столкновений"""
         for coll in self.get_collisions(self.main_character, self.platforms):
-            if self.main_character.bottom >= coll.top and self.main_character.bottom <= coll.bottom:
-                if self.main_character.v_momentum > 1:
-                    self.main_character.rect.bottom = coll.rect.top
-                    self.scroll_down = True
-                    self.main_character.jump()
+            self.scroll_down = True
+            self.main_character.process_collision(coll)
         if self.main_character.collides(self.bottom_rect):
-            self.main_character.v_momentum = -10
+            self.main_character.add_momentum(-10)
             # self.close()
             print("You lose")
 
@@ -83,10 +85,13 @@ class Level(GameScene):
 
     def handle_movement(self):
         """метод для обработки движения персонажа и платформ"""
-        self.scroll(5 * self.parallax_coefficient)
+        # self.offset = (self.size[1] - self.main_character.y) // 20
+        self.offset = 5
+        print(self.offset)
+        self.scroll(self.offset)
         self.move_character(8)
         if self.scroll_down:
-            self.platforms.update(5)
+            self.platforms.update(self.offset)
 
     def handle_keyboard_events(self, event, state=True):
         """метод для обработки нажатий клавиатуры"""
@@ -100,15 +105,11 @@ class Level(GameScene):
             self.move_left = state
         if event.key == pygame.K_d:
             self.move_right = state
-        if event.key == pygame.K_SPACE:
-            self.main_character.jump()
 
     def scroll(self, offset: int):
-        """метод для сдвига фона вниз/вверх"""
-        if self.scroll_up:
-            self.bg_pos[1] -= offset
-        elif self.scroll_down:
-            self.bg_pos[1] += offset
+        """метод для сдвига фона вниз"""
+        if self.scroll_down:
+            self.bg_pos[1] += offset * self.parallax_coefficient
 
     def move_character(self, offset: int):
         """метод для сдвига игрока по горизонтали, пока зажаты кнопки A/D"""

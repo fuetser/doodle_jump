@@ -34,6 +34,10 @@ class GameObject(pygame.sprite.Sprite):
         """метод для удаления спарйта из группы"""
         self.to_delete = True
 
+    def process_collision(self, item: pygame.sprite.Sprite):
+        """метод для обработки столкновения с объетами"""
+        raise NotImplementedError
+
     def __eq__(self, other):
         """метод для сравнения спрайтов"""
         return self._id == other._id

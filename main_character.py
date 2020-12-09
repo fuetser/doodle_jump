@@ -1,4 +1,5 @@
 from core import GameObject
+from items import GameItem
 import pygame
 
 
@@ -32,17 +33,24 @@ class MainCharacter(GameObject):
             self.image = pygame.transform.flip(self.image, True, False)
             self.facing_right = False
 
+    def process_collision(self, coll: pygame.sprite.Sprite):
+        """метод для обработки столкновений"""
+        if self.bottom >= coll.top and self.bottom <= coll.bottom:
+            if isinstance(coll, GameItem):
+                coll.activate(self)
+            elif self.v_momentum > 1:
+                self.rect.bottom = coll.rect.top
+                self.jump()
+
     def move_v(self):
         """метод для обработки гравитации"""
         self.v_momentum += self.gravity_ratio
-        if self.y > 600 - self.height:
-            # self.v_momentum = 0
-            pass
+        if self.y > self.screen_height - self.height:
+            self.v_momentum = 0
         self.rect.y += self.v_momentum
 
     def jump(self):
         """метод для прыжка от платформы"""
-        # self.y -= 5
         self.v_momentum = -5
 
     def update(self):
@@ -50,3 +58,7 @@ class MainCharacter(GameObject):
 
     def draw(self, win):
         win.blit(self.image, self.rect)
+
+    def add_momentum(self, amount: int):
+        """метод для изменения ускорения игрока"""
+        self.v_momentum += amount
