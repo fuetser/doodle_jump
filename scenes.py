@@ -49,6 +49,7 @@ class Level(GameScene):
                     self.main_character.rect.bottom = coll.rect.top
                     self.scroll_down = True
                     self.main_character.jump()
+                    self.platforms.remove(coll)
         if self.main_character.collides(self.bottom_rect):
             self.main_character.v_momentum = -10
             # self.close()
