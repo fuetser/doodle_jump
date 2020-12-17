@@ -5,7 +5,7 @@ class GameObject(pygame.sprite.Sprite):
     """Абстрактный класс для игровых объектов"""
     object_id = 0
 
-    def __init__(self, x, y, image_path, screen_size, convert_alpha=False):
+    def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
         super(GameObject, self).__init__()
         if convert_alpha:
             self.image = pygame.image.load(image_path).convert_alpha()
@@ -30,9 +30,14 @@ class GameObject(pygame.sprite.Sprite):
         """метод для изменения позиции объекта"""
         self.rect.topleft = pos
 
-    def delete(self):
+    def delete(self, *args, **kwargs):
         """метод для удаления спарйта из группы"""
         self.to_delete = True
+        self.on_delete(*args, **kwargs)
+
+    def on_delete(self, *args, **kwargs):
+        """метод, выполняемый при удалении объекта"""
+        pass
 
     def process_collision(self, item: pygame.sprite.Sprite):
         """метод для обработки столкновения с объетами"""

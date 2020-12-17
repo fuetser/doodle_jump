@@ -5,7 +5,7 @@ import pygame
 class Platform(GameObject):
     """Абстрактный класс для создания платформ"""
 
-    def __init__(self, x, y, image_path, screen_size, convert_alpha=False):
+    def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
         super().__init__(x, y, image_path, screen_size, convert_alpha)
         self.item = None
 
