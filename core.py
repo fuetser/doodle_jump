@@ -26,6 +26,10 @@ class GameObject(pygame.sprite.Sprite):
         """метод для проверки столкновений с другими объектами"""
         return self.rect.colliderect(rect)
 
+    def collidepoint(self, point: tuple[int, int]):
+        """Метод для проверки столкновения объекта с точкой"""
+        return self.rect.collidepoint(point)
+
     def set_pos(self, pos: tuple[int, int]):
         """метод для изменения позиции объекта"""
         self.rect.topleft = pos
@@ -150,3 +154,7 @@ class Group():
 
     def __len__(self):
         return len(self.sprites)
+
+    def clear(self):
+        """Метод для удаления всех спрайтов из группы"""
+        self.sprites.clear()

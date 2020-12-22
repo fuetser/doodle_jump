@@ -1,5 +1,6 @@
-from core import GameScene, Group
+from core import GameScene, Group, GameObject
 from items import *
+import json
 from main_character import MainCharacter
 from platforms import Platform
 import pygame
@@ -31,6 +32,10 @@ class Level(GameScene):
         # список платформ на экране
         self.platforms = Group()
         self.items = Group()
+
+        self.score_font = pygame.font.SysFont("cambriacambriamath", 30)
+        self.score = 0
+        self.game_over = False
 
     def spawn_platforms(self):
         """метод для генерации новых платформ в рандомных координатах"""
@@ -74,7 +79,7 @@ class Level(GameScene):
             self.main_character.process_collision(coll)
             self.scroll_down = True
         if self.main_character.collides(self.bottom_rect):
-            print("You lose")
+            self.game_over = True
             self.close()
 
     def redraw(self, win):
@@ -84,6 +89,7 @@ class Level(GameScene):
         self.main_character.draw(win)
         self.platforms.draw(win)
         self.items.draw(win)
+        win.blit(self.render_score(), (10, 10))
 
     def handle_events(self):
         """метод для обработки событий сцены"""
@@ -109,7 +115,7 @@ class Level(GameScene):
 
     def handle_movement(self):
         """метод для обработки движения персонажа и платформ"""
-        # self.offset = (self.size[1] - self.main_character.y) // 20
+        # self.offset = (self.size[1] - self.main_character.y)
         self.move_character(8)
         if self.scroll_down:
             self.scroll(self.offset)
@@ -127,6 +133,7 @@ class Level(GameScene):
     def scroll(self, offset: int):
         """метод для сдвига фона вниз"""
         if self.scroll_down:
+            self.score += offset
             self.bg_pos[1] += offset * self.parallax_coefficient
 
     def move_character(self, offset: int):
@@ -136,15 +143,41 @@ class Level(GameScene):
         elif self.move_left:
             self.main_character.move_h(-offset)
 
+    def render_score(self):
+        """Метод для рендера игрового счета"""
+        return self.score_font.render(str(self.score), True, (0, 0, 0))
+
+    def get_score(self) -> int:
+        return self.score
+
+    def restart(self):
+        """Метод для перезапуска игры"""
+        self.game_over = False
+        self.score = 0
+        self.bg_pos = [0, -2000]
+        self.offset = 5
+        self.scroll_down = False
+        self.move_right = False
+        self.move_left = False
+        self.platforms.clear()
+        self.items.clear()
+        self.main_character.set_pos((200, 100))
+
 
 class MainMenu(GameScene):
     """Класс для создания главного меню (пока пустой)"""
 
     def __init__(self, display: pygame.Surface, fps=60):
         super(MainMenu, self).__init__(display, fps)
+        self.background = pygame.image.load(
+            "assets/main_menu_bg.jpg").convert()
+        self.play_button = GameObject(400, 150, "assets/play_button.png",
+                                      self.size, convert_alpha=True)
+        self.load_level = False
 
     def redraw(self, win):
-        win.fill((255, 0, 0))
+        win.blit(self.background, (0, 0))
+        win.blit(self.play_button.image, self.play_button.rect)
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -155,3 +188,97 @@ class MainMenu(GameScene):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.close()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.play_button.collidepoint(event.pos):
+                    self.load_level = True
+                    self.close()
+
+    def show(self):
+        self.load_level = False
+        super().show()
+
+
+class GameOverMenu(GameScene):
+    """Класс для создание меню после проигрыша"""
+
+    def __init__(self, display: pygame.Surface, fps=60):
+        super(GameOverMenu, self).__init__(display, fps)
+        self.score = 0
+        self.highscore = 0
+        self.font = pygame.font.SysFont("cambriacambriamath", 40)
+        self.restart_button = GameObject(200, 210, "assets/restart_button.png",
+                                         self.size, convert_alpha=True)
+        self.menu_button = GameObject(200, 300, "assets/menu_button.png",
+                                      self.size, convert_alpha=True)
+        self.restart_game = False
+        self.load_main_menu = False
+
+    def redraw(self, win):
+        pygame.draw.rect(win, "white",
+                         (50, 50, self.size[0] - 100, self.size[1] - 100))
+        highscore = self.font.render(
+            f"Highscore: {self.highscore}", True, "black")
+        current_score = self.font.render(f"Score: {self.score}", True, "black")
+        win.blit(highscore, ((self.size[0] - highscore.get_width()) // 2, 75))
+        win.blit(current_score,
+                 ((self.size[0] - current_score.get_width()) // 2, 150))
+        # win.blit(self.font.render(str(self.score), True, "black"), (60, 110))
+        win.blit(self.restart_button.image, self.restart_button.rect)
+        win.blit(self.menu_button.image, self.menu_button.rect)
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.close()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.restart_button.collidepoint(event.pos):
+                    self.restart_game = True
+                    self.close()
+                if self.menu_button.collidepoint(event.pos):
+                    self.load_main_menu = True
+                    self.close()
+
+    def set_score(self, score: int):
+        """Метод для установки счета игры"""
+        self.score = score
+        self.update_highscore(score)
+
+    def get_highscore(self):
+        """метод для получения рекорда из файла"""
+        try:
+            with open("values.json", "r", encoding="u8") as f:
+                data = json.load(f)
+        except Exception as err:
+            print(err)
+            highscore = -1
+        else:
+            highscore = int(data.get("highscore", -1))
+        return highscore
+
+    def save_highscore(self, new_highscore: int):
+        """метод для сохранения нового рекорда"""
+        try:
+            with open("values.json", "w", encoding="u8") as f:
+                json.dump({"highscore": new_highscore}, f)
+        except Exception as err:
+            print(err)
+
+    def update_highscore(self, new_highscore: int):
+        """метод для обновления рекорда по окончанию игры"""
+        if (score := self.get_highscore()) != -1 and new_highscore > score:
+            self.save_highscore(new_highscore)
+            self.highscore = new_highscore
+        else:
+            self.highscore = score
+
+    def show(self):
+        self.restart_game = False
+        self.load_main_menu = False
+        super().show()
