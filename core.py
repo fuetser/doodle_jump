@@ -146,6 +146,15 @@ class Group():
         for sprite in self.sprites:
             win.blit(sprite.image, sprite.rect)
 
+    def clear(self):
+        """Метод для удаления всех спрайтов из группы"""
+        self.sprites.clear()
+
+    def get_collisions(self, target):
+        """метод для получения спрайтов, с которыми столкнулся предеанный объект"""
+        return [sprite for sprite in self.sprites if target.collides(
+            sprite.rect)]
+
     def __getitem__(self, index):
         try:
             return self.sprites[index]
@@ -154,7 +163,3 @@ class Group():
 
     def __len__(self):
         return len(self.sprites)
-
-    def clear(self):
-        """Метод для удаления всех спрайтов из группы"""
-        self.sprites.clear()

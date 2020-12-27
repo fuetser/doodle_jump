@@ -1,4 +1,5 @@
-from core import GameObject
+from core import GameObject, Group
+from enemies import Enemy
 from items import GameItem
 import pygame
 
@@ -16,6 +17,8 @@ class MainCharacter(GameObject):
         self.falling = True
         self.flying_object = None
         self.has_item = False
+        self.game_over = False
+        self.bullets = Group()
 
     def move_h(self, offset: int):
         """метод для перемещения персонажа по горизонтали
@@ -40,6 +43,11 @@ class MainCharacter(GameObject):
         """метод для обработки столкновений"""
         if isinstance(coll, GameItem) and not self.has_item:
             coll.activate(self)
+        elif isinstance(coll, Enemy):
+            if self.bottom > coll.top + 20:
+                self.game_over = True
+            else:
+                coll.delete()
         elif self.bottom >= coll.top and self.bottom <= coll.bottom:
             if self.v_momentum > 1 and not self.has_item:
                 self.rect.bottom = coll.rect.top
@@ -55,15 +63,32 @@ class MainCharacter(GameObject):
         if self.flying_object is not None:
             self.rect.y -= self.flying_object.speed
 
+    def shoot(self, target_x: int, target_y: int):
+        """метод для выстрела в определенном направлении"""
+        x_pos = self.rect.right if self.facing_right else self.rect.left
+        bullet = Bullet(x_pos - 10, self.y + 15, "assets/items/bullet.png",
+                        (self.screen_width, self.screen_height))
+        bullet.shoot(target_x, target_y)
+        self.bullets.add(bullet)
+
+    def calculate_bullets_collisions(self, coll: GameObject):
+        """метод для обработки столкновений пуль с объектом"""
+        if self.bullets.get_collisions(coll):
+            coll.delete()
+
     def jump(self):
         """метод для прыжка от платформы"""
         self.set_momentum(-5)
 
-    def update(self):
+    def update(self, enemy=None):
         self.move_v()
+        self.bullets.update()
+        if enemy is not None:
+            self.calculate_bullets_collisions(enemy)
 
     def draw(self, win: pygame.Surface):
         win.blit(self.image, self.rect)
+        self.bullets.draw(win)
 
     def add_momentum(self, amount: int):
         """метод для изменения ускорения игрока"""
@@ -81,3 +106,42 @@ class MainCharacter(GameObject):
         """метод для добавления шапки/джетпака"""
         self.has_item = flying_object is not None
         self.flying_object = flying_object
+
+    def reset(self):
+        """метод для приведения атрибутов к дефолтному состоянию"""
+        self.v_momentum = 0
+        self.facing_right = False
+        self.falling = True
+        self.flying_object = None
+        self.has_item = False
+        self.game_over = False
+        self.bullets.clear()
+
+
+class Bullet(GameObject):
+    """Класс для создания пули"""
+
+    def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
+        super().__init__(x, y, image_path, screen_size, convert_alpha)
+        self.speed_x = 0
+        self.speed_y = 0
+        self.speed_coefficient = 15
+
+    def shoot(self, target_x: int, target_y: int):
+        """метод для старта полета пули в определенном направлении"""
+        self.speed_x = int((self.x - target_x) / self.speed_coefficient)
+        self.speed_y = int((self.y - target_y) / self.speed_coefficient)
+        # self.speed_x = self.speed_coefficient
+        # if self.x < target_x:
+        #     self.speed_x *= -1
+        # self.speed_y = self.speed_coefficient
+        # if self.y < target_y:
+        #     self.speed_y *= -1
+
+    def update(self):
+        self.rect.x -= self.speed_x
+        self.rect.y -= self.speed_y
+        condition1 = self.x > self.screen_width or self.y > self.screen_height
+        condition2 = self.x < self.rect.width or self.x < self.rect.height
+        if condition1 or condition2:
+            self.delete()
