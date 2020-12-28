@@ -1,10 +1,10 @@
-from core import GameObject, Group
+from core import StaticGameObject, Group
 from enemies import Enemy
 from items import GameItem
 import pygame
 
 
-class MainCharacter(GameObject):
+class MainCharacter(StaticGameObject):
     """Класс для создания главного персонажа"""
 
     def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
@@ -71,7 +71,7 @@ class MainCharacter(GameObject):
         bullet.shoot(target_x, target_y)
         self.bullets.add(bullet)
 
-    def calculate_bullets_collisions(self, coll: GameObject):
+    def calculate_bullets_collisions(self, coll: StaticGameObject):
         """метод для обработки столкновений пуль с объектом"""
         if self.bullets.get_collisions(coll):
             coll.delete()
@@ -110,7 +110,6 @@ class MainCharacter(GameObject):
     def reset(self):
         """метод для приведения атрибутов к дефолтному состоянию"""
         self.v_momentum = 0
-        self.facing_right = False
         self.falling = True
         self.flying_object = None
         self.has_item = False
@@ -118,7 +117,7 @@ class MainCharacter(GameObject):
         self.bullets.clear()
 
 
-class Bullet(GameObject):
+class Bullet(StaticGameObject):
     """Класс для создания пули"""
 
     def __init__(self, x, y, image_path, screen_size, convert_alpha=True):

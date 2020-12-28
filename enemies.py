@@ -1,12 +1,12 @@
-from core import GameObject
-# import pygame
+from core import AnimatedGameObject
+import os
 
 
-class Enemy(GameObject):
+class Enemy(AnimatedGameObject):
     """Абстрактный класс для противника"""
 
-    def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
-        super().__init__(x, y, image_path, screen_size, convert_alpha)
+    def __init__(self, x, y, images, screen_size, convert_alpha=True):
+        super().__init__(x, y, images, screen_size, convert_alpha)
         self.horizontal_speed = 5
 
     def move_h(self):
@@ -16,6 +16,7 @@ class Enemy(GameObject):
 
     def update(self, scroll: int):
         """метод для обновления спрайта"""
+        super().update()
         self.move_h()
         self.scroll(scroll)
         if self.y > self.screen_height:
@@ -24,3 +25,10 @@ class Enemy(GameObject):
     def scroll(self, offset: int):
         """метод для сдвига платформы вниз по экрану"""
         self.rect.y += offset
+
+
+class FlyingEye(Enemy):
+    def __init__(self, x, y, screen_size):
+        images = [f"assets/enemies/eye/{image}" for image in os.listdir(
+            "assets/enemies/eye")]
+        super().__init__(x, y, images, screen_size)

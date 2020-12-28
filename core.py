@@ -5,14 +5,8 @@ class GameObject(pygame.sprite.Sprite):
     """Абстрактный класс для игровых объектов"""
     object_id = 0
 
-    def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
-        super(GameObject, self).__init__()
-        if convert_alpha:
-            self.image = pygame.image.load(image_path).convert_alpha()
-        else:
-            self.image = pygame.image.load(image_path).convert()
-        self.rect = self.image.get_rect()
-        self.rect.topleft = (x, y)
+    def __init__(self, screen_size):
+        super().__init__()
         self.screen_width, self.screen_height = screen_size
         self._id = GameObject.object_id
         GameObject.object_id += 1
@@ -20,7 +14,7 @@ class GameObject(pygame.sprite.Sprite):
 
     def update(self):
         """метод для обновления положения объекта"""
-        raise NotImplementedError
+        pass
 
     def collides(self, rect: pygame.Rect):
         """метод для проверки столкновений с другими объектами"""
@@ -45,7 +39,7 @@ class GameObject(pygame.sprite.Sprite):
 
     def process_collision(self, item: pygame.sprite.Sprite):
         """метод для обработки столкновения с объетами"""
-        raise NotImplementedError
+        pass
 
     def __eq__(self, other):
         """метод для сравнения спрайтов"""
@@ -73,6 +67,45 @@ class GameObject(pygame.sprite.Sprite):
         return self.rect.bottom
 
 
+class StaticGameObject(GameObject):
+    """Абстрактный класс для создания статичных игровых объектов"""
+
+    def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
+        super().__init__(screen_size)
+        if convert_alpha:
+            self.image = pygame.image.load(image_path).convert_alpha()
+        else:
+            self.image = pygame.image.load(image_path).convert()
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+
+
+class AnimatedGameObject(GameObject):
+    """Абстрактный класс для создания анимированных игровых объеков"""
+
+    def __init__(self, x, y, images, screen_size, convert_alpha=True):
+        super().__init__(screen_size)
+        if convert_alpha:
+            self.images = [pygame.image.load(
+                image).convert_alpha() for image in images]
+        else:
+            self.images = [pygame.image.load(
+                image).convert() for image in images]
+        self.image = self.images[0]
+        self.rect = self.image.get_rect()
+        self.rect.topleft = (x, y)
+        self.current_frame = 0
+        self.frames_amount = len(self.images)
+
+    def update(self, skip_frames=1):
+        position = self.pos
+        self.current_frame = (
+            self.current_frame + skip_frames) % self.frames_amount
+        self.image = self.images[self.current_frame]
+        self.rect = self.image.get_rect()
+        self.set_pos(position)
+
+
 class GameScene():
     """Абстрактный класс для игровой сцены/меню"""
 
@@ -86,11 +119,11 @@ class GameScene():
 
     def redraw(self, win: pygame.Surface):
         """метод для отрисовки на заданной поверхности"""
-        raise NotImplementedError
+        pass
 
     def handle_events(self):
         """метод для обработки событий внутри сцены"""
-        raise NotImplementedError
+        pass
 
     def close(self):
         """метод для закрытия сцены"""

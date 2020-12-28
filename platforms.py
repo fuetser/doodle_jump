@@ -1,8 +1,8 @@
-from core import GameObject
+from core import StaticGameObject
 import pygame
 
 
-class Platform(GameObject):
+class Platform(StaticGameObject):
     """Абстрактный класс для создания платформ"""
 
     def __init__(self, x, y, image_path, screen_size, convert_alpha=True):

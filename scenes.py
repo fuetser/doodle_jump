@@ -1,5 +1,5 @@
-from core import GameScene, Group, GameObject
-from enemies import *
+from core import GameScene, Group, StaticGameObject
+from enemies import FlyingEye
 from items import *
 import json
 from main_character import MainCharacter
@@ -55,23 +55,19 @@ class Level(GameScene):
 
     def spawn_objects(self, platform: Platform, x: int, y: int):
         if 0.1 < random.random() < 0.2:
-            spring = Spring(
-                x + 10, y - 5, "assets/items/spring16.png", self.size)
+            spring = Spring(x + 10, y - 5, self.size)
             platform.add_item(spring)
             self.items.add(spring)
         elif 0.4 < random.random() < 0.5:
-            hat = PropellerHat(
-                x + 10, y - 15, "assets/items/hat32.png", self.size)
+            hat = PropellerHat(x + 10, y - 15, self.size)
             platform.add_item(hat)
             self.items.add(hat)
         elif 0.2 < random.random() < 0.3:
-            trampoline = Trampoline(
-                x + 4, y - 15, "assets/items/trampoline64.png", self.size)
+            trampoline = Trampoline(x + 4, y - 15, self.size)
             platform.add_item(trampoline)
             self.items.add(trampoline)
         elif 0.3 < random.random() < 0.4:
-            jetpack = Jetpack(x + 13, y - 45,
-                              "assets/items/jetpack48.png", self.size)
+            jetpack = Jetpack(x + 13, y - 45, self.size)
             platform.add_item(jetpack)
             self.items.add(jetpack)
 
@@ -80,7 +76,7 @@ class Level(GameScene):
         if len(self.enemies) == 0 and self.score > 10000:
             if self.score - self.enemy_height > 2000:
                 self.enemy_height = self.score
-                enemy = Enemy(0, 0, "assets/enemies/enemy.png", self.size)
+                enemy = FlyingEye(0, 0, self.size)
                 self.enemies.add(enemy)
 
     def check_collisions(self):
@@ -196,8 +192,9 @@ class MainMenu(GameScene):
         super(MainMenu, self).__init__(display, fps)
         self.background = pygame.image.load(
             "assets/ui/main_menu_bg.jpg").convert()
-        self.play_button = GameObject(400, 150, "assets/ui/play_button.png",
-                                      self.size, convert_alpha=True)
+        self.play_button = StaticGameObject(400, 150,
+                                            "assets/ui/play_button.png",
+                                            self.size, convert_alpha=True)
         self.load_level = False
 
     def redraw(self, win):
@@ -228,10 +225,12 @@ class GameOverMenu(GameScene):
         self.score = 0
         self.highscore = 0
         self.font = pygame.font.SysFont("cambriacambriamath", 40)
-        self.restart_button = GameObject(200, 210, "assets/ui/restart_button.png",
-                                         self.size, convert_alpha=True)
-        self.menu_button = GameObject(200, 300, "assets/ui/menu_button.png",
-                                      self.size, convert_alpha=True)
+        self.restart_button = StaticGameObject(200, 210,
+                                               "assets/ui/restart_button.png",
+                                               self.size, convert_alpha=True)
+        self.menu_button = StaticGameObject(200, 300,
+                                            "assets/ui/menu_button.png",
+                                            self.size, convert_alpha=True)
         self.restart_game = False
         self.load_main_menu = False
 
