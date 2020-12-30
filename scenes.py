@@ -75,9 +75,9 @@ class Level(GameScene):
             platform.add_item(magnet)
             self.items.add(magnet)
         elif 0.3 < random.random() < 0.7:
-            coin = BronzeCoin(x + 10, y - 15, self.size)
-            platform.add_item(coin)
-            self.items.add(coin)
+            shield = Shield(x + 10, y - 15, self.size)
+            platform.add_item(shield)
+            self.items.add(shield)
 
     def spawn_enemies(self):
         """метод для спавна врагов"""

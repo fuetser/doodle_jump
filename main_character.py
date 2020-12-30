@@ -129,7 +129,7 @@ class MainCharacter(StaticGameObject):
     def get_collected_money(self) -> int:
         return self.money_collected
 
-    def set_item(self, shield=None, magnet=None):
+    def set_shield(self, shield=None):
         if self.shield is not None and shield is not None:
             self.shield.delete(self)
         self.shield = shield
