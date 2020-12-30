@@ -6,10 +6,11 @@ import pygame
 class GameItem(AnimatedGameObject):
     """Абстрактный класс для игрового предмета"""
 
-    def __init__(self, x, y, images, screen_size, convert_alpha=True):
+    def __init__(self, x, y, images, screen_size, convert_alpha=True, create_static=True):
         super().__init__(x, y, images, screen_size, convert_alpha)
-        self.static_image = self.images.pop(0)
-        self.frames_amount -= 1
+        if create_static:
+            self.static_image = self.images.pop(0)
+            self.frames_amount -= 1
         self.activated = False
 
     def activate(self, player: pygame.sprite.Sprite):
@@ -134,3 +135,127 @@ class Jetpack(FlyingGameItem):
         if self.facing_right != player_facing_right:
             self.image = pygame.transform.flip(self.image, True, False)
             # self.facing_right = player_facing_right
+
+
+class Coin(GameItem):
+    """Абстрактный класс для создания монеток"""
+
+    def __init__(self, x, y, folder, screen_size, price, ignore_scroll=False):
+        images = [f"{folder}/{image}" for image in os.listdir(folder)
+                  for _ in range(3)]
+        super().__init__(x, y, images, screen_size, create_static=False)
+        self.price = price
+        self.ignore_scroll = ignore_scroll
+        self.is_magnetized = False
+        self.speed_x = 0
+        self.speed_y = 0
+        self.speed_coefficient = 13
+
+    def activate(self, player: pygame.sprite.Sprite):
+        if not self.activated:
+            self.activated = True
+            player.add_money(self.price)
+            self.delete()
+
+    def update(self, *args, **kwargs):
+        if not self.ignore_scroll:
+            super().update(*args, **kwargs)
+            if self.is_magnetized:
+                self.rect.x -= self.speed_x
+                self.rect.y -= self.speed_y
+        else:
+            super().update()
+
+    def magnetize(self, pos_x, pos_y):
+        """метод для передвижения монетки к игроку при примагничивании"""
+        self.is_magnetized = True
+        self.speed_x = int((self.x - pos_x) / self.speed_coefficient)
+        self.speed_y = int((self.y - pos_y) / self.speed_coefficient)
+
+
+class BronzeCoin(Coin):
+    """Класс для создания бронзовых монеток"""
+
+    def __init__(self, x, y, screen_size, ignore_scroll=False):
+        super().__init__(x, y, "assets/items/bronze_coin", screen_size,
+                         price=1, ignore_scroll=ignore_scroll)
+
+
+class SilverCoin(Coin):
+    """Класс для создания серебрянных монеток"""
+
+    def __init__(self, x, y, screen_size, ignore_scroll=False):
+        super().__init__(x, y, "assets/items/silver_coin", screen_size,
+                         price=5, ignore_scroll=ignore_scroll)
+
+
+class GoldenCoin(Coin):
+    """Класс для создания золотых монеток"""
+
+    def __init__(self, x, y, screen_size, ignore_scroll=False):
+        super().__init__(x, y, "assets/items/golden_coin", screen_size,
+                         price=10, ignore_scroll=ignore_scroll)
+
+
+class Shield(GameItem):
+    """Класс для создания щита"""
+
+    def __init__(self, x, y, screen_size):
+        images = ["assets/items/shield32.png"]
+        images += [f"assets/items/shield/{image}" for image in os.listdir(
+            "assets/items/shield") for _ in range(3)]
+        super().__init__(x, y, images, screen_size)
+        self.lifespan = 240
+        self.image = self.static_image
+
+    def activate(self, player: pygame.sprite.Sprite):
+        if not self.activated:
+            player.set_shield(self)
+            self.activated = True
+
+    def update(self, *args, **kwargs):
+        player = kwargs.get("player")
+        if not self.activated:
+            self.scroll(args[0])
+        else:
+            super().update()
+            self.rect.center = player.rect.center
+            self.lifespan -= 1
+        if self.lifespan == 0 or self.y > self.screen_height:
+            self.delete(player)
+
+    def on_delete(self, player: pygame.sprite.Sprite):
+        if self.activated:
+            player.set_shield()
+
+
+class Magnet(GameItem):
+    def __init__(self, x, y, screen_size):
+        images = ["assets/items/magnet32.png"]
+        images += [f"assets/items/magnet/{image}" for image in os.listdir(
+            "assets/items/magnet") for _ in range(2)]
+        super().__init__(x, y, images, screen_size)
+        self.lifespan = 240
+        self.image = self.static_image
+        self.coverage_area = pygame.Rect(x - 100, y - 100, 200, 200)
+
+    def activate(self, player: pygame.sprite.Sprite):
+        if not self.activated:
+            player.set_magnet(self)
+            self.activated = True
+
+    def update(self, *args, **kwargs):
+        player = kwargs.get("player")
+        if not self.activated:
+            self.scroll(args[0])
+        else:
+            super().update()
+            self.rect.center = player.rect.center
+            self.coverage_area.center = player.rect.center
+            self.lifespan -= 1
+        if self.lifespan == 0 or self.y > self.screen_height:
+            self.delete(player)
+
+    def on_delete(self, player: pygame.sprite.Sprite):
+        if self.activated:
+            player.set_magnet()

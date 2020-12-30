@@ -1,7 +1,6 @@
 from core import GameScene, Group, StaticGameObject
 from enemies import FlyingEye
 from items import *
-import json
 from main_character import MainCharacter
 from platforms import Platform
 import pygame
@@ -32,7 +31,7 @@ class Level(GameScene):
         self.parallax_coefficient = 0.1
         # количество платформ в сцене
         self.platforms_amount = 10
-        # список платформ на экране
+        # группы объектов на экране
         self.platforms = Group()
         self.items = Group()
         self.enemies = Group()
@@ -41,6 +40,7 @@ class Level(GameScene):
         self.score = 0
         self.game_over = False
         self.enemy_height = 0
+        self.coin = GoldenCoin(500, 15, self.size, ignore_scroll=True)
 
     def spawn_platforms(self):
         """метод для генерации новых платформ в рандомных координатах"""
@@ -54,22 +54,30 @@ class Level(GameScene):
             self.spawn_enemies()
 
     def spawn_objects(self, platform: Platform, x: int, y: int):
-        if 0.1 < random.random() < 0.2:
-            spring = Spring(x + 10, y - 5, self.size)
-            platform.add_item(spring)
-            self.items.add(spring)
-        elif 0.4 < random.random() < 0.5:
-            hat = PropellerHat(x + 10, y - 15, self.size)
-            platform.add_item(hat)
-            self.items.add(hat)
-        elif 0.2 < random.random() < 0.3:
-            trampoline = Trampoline(x + 4, y - 15, self.size)
-            platform.add_item(trampoline)
-            self.items.add(trampoline)
-        elif 0.3 < random.random() < 0.4:
-            jetpack = Jetpack(x + 13, y - 45, self.size)
-            platform.add_item(jetpack)
-            self.items.add(jetpack)
+        # if 0.1 < random.random() < 0.2:
+        #     spring = Spring(x + 10, y - 5, self.size)
+        #     platform.add_item(spring)
+        #     self.items.add(spring)
+        # elif 0.4 < random.random() < 0.5:
+        #     hat = PropellerHat(x + 10, y - 15, self.size)
+        #     platform.add_item(hat)
+        #     self.items.add(hat)
+        # elif 0.2 < random.random() < 0.3:
+        #     trampoline = Trampoline(x + 4, y - 15, self.size)
+        #     platform.add_item(trampoline)
+        #     self.items.add(trampoline)
+        # elif 0.3 < random.random() < 0.4:
+        #     jetpack = Jetpack(x + 13, y - 45, self.size)
+        #     platform.add_item(jetpack)
+        #     self.items.add(jetpack)
+        if 0.1 < random.random() < 0.3:
+            magnet = Magnet(x + 10, y - 25, self.size)
+            platform.add_item(magnet)
+            self.items.add(magnet)
+        elif 0.3 < random.random() < 0.7:
+            coin = BronzeCoin(x + 10, y - 15, self.size)
+            platform.add_item(coin)
+            self.items.add(coin)
 
     def spawn_enemies(self):
         """метод для спавна врагов"""
@@ -82,9 +90,10 @@ class Level(GameScene):
     def check_collisions(self):
         """метод для обработки всех столкновений"""
         for group in (self.platforms, self.items, self.enemies):
-            for coll in group.get_collisions(self.main_character):
-                self.main_character.process_collision(coll)
-                self.scroll_down = True
+            ignore = (self.main_character.shield, self.main_character.magnet)
+            for coll in group.get_collisions(self.main_character, ignore):
+                self.scroll_down = self.main_character.process_collision(coll)
+            self.main_character.process_magnet_collisions(group)
 
         if self.main_character.collides(self.bottom_rect) or self.main_character.game_over:
             self.game_over = True
@@ -97,11 +106,15 @@ class Level(GameScene):
         win.blit(self.background, (0, relative_background_y - self.bg_height))
         if relative_background_y < self.size[1]:
             win.blit(self.background, (0, relative_background_y))
-        self.main_character.draw(win)
         self.platforms.draw(win)
+        self.main_character.draw(win)
         self.items.draw(win)
         self.enemies.draw(win)
         win.blit(self.render_score(), (10, 10))
+        money = self.render_money()
+        money_x = self.size[0] - money.get_width() - 10
+        win.blit(money, (money_x, 10))
+        self.coin.set_pos((money_x - self.coin.rect.w - 10, 15))
 
     def handle_events(self):
         """метод для обработки событий сцены"""
@@ -166,8 +179,16 @@ class Level(GameScene):
         """Метод для рендера игрового счета"""
         return self.score_font.render(str(self.score), True, (0, 0, 0))
 
+    def render_money(self):
+        """метод для рендера количества собранных монеток"""
+        return self.score_font.render(
+            str(self.main_character.get_collected_money()), True, (0, 0, 0))
+
     def get_score(self) -> int:
         return self.score
+
+    def get_collectde_money(self) -> int:
+        return self.main_character.get_collected_money()
 
     def restart(self):
         """Метод для перезапуска игры"""
@@ -183,6 +204,14 @@ class Level(GameScene):
         self.items.clear()
         self.enemies.clear()
         self.main_character.set_pos((200, 100))
+        self.items.add(self.coin)
+
+    def revive_game(self):
+        """метод для продолжения игры после проигрыша"""
+        self.main_character.set_pos((250, 150))
+        self.move_left = False
+        self.move_right = False
+        self.show()
 
 
 class MainMenu(GameScene):
@@ -225,14 +254,22 @@ class GameOverMenu(GameScene):
         self.score = 0
         self.highscore = 0
         self.font = pygame.font.SysFont("cambriacambriamath", 40)
-        self.restart_button = StaticGameObject(200, 210,
+        self.restart_button = StaticGameObject(220, 210,
                                                "assets/ui/restart_button.png",
                                                self.size, convert_alpha=True)
-        self.menu_button = StaticGameObject(200, 300,
+        self.menu_button = StaticGameObject(220, 300,
                                             "assets/ui/menu_button.png",
                                             self.size, convert_alpha=True)
+        self.continue_button = StaticGameObject(200, 475,
+                                                "assets/ui/continue_button.png",
+                                                self.size, convert_alpha=True)
         self.restart_game = False
         self.load_main_menu = False
+        self.revive_game = False
+        self.revive_price = 250
+        self.revive_countdown = 5 * self.FPS
+        self.revive_happened = False
+        self.draw_revive = False
 
     def redraw(self, win):
         pygame.draw.rect(win, "grey",
@@ -243,9 +280,10 @@ class GameOverMenu(GameScene):
         win.blit(highscore, ((self.size[0] - highscore.get_width()) // 2, 75))
         win.blit(current_score,
                  ((self.size[0] - current_score.get_width()) // 2, 150))
-        # win.blit(self.font.render(str(self.score), True, "black"), (60, 110))
         win.blit(self.restart_button.image, self.restart_button.rect)
         win.blit(self.menu_button.image, self.menu_button.rect)
+        if self.draw_revive:
+            self.draw_revive_dialog(win)
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -256,9 +294,14 @@ class GameOverMenu(GameScene):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.restart_button.collidepoint(event.pos):
                     self.restart_game = True
+                    self.revive_happened = False
                     self.close()
                 if self.menu_button.collidepoint(event.pos):
                     self.load_main_menu = True
+                    self.close()
+                if self.draw_revive and self.continue_button.collidepoint(event.pos):
+                    self.revive_game = True
+                    self.update_money(-self.revive_price)
                     self.close()
 
     def set_score(self, score: int):
@@ -266,35 +309,49 @@ class GameOverMenu(GameScene):
         self.score = score
         self.update_highscore(score)
 
-    def get_highscore(self):
-        """метод для получения рекорда из файла"""
-        try:
-            with open("values.json", "r", encoding="u8") as f:
-                data = json.load(f)
-        except Exception as err:
-            print(err)
-            highscore = -1
-        else:
-            highscore = int(data.get("highscore", -1))
-        return highscore
-
-    def save_highscore(self, new_highscore: int):
-        """метод для сохранения нового рекорда"""
-        try:
-            with open("values.json", "w", encoding="u8") as f:
-                json.dump({"highscore": new_highscore}, f)
-        except Exception as err:
-            print(err)
-
     def update_highscore(self, new_highscore: int):
         """метод для обновления рекорда по окончанию игры"""
-        if (score := self.get_highscore()) != -1 and new_highscore > score:
-            self.save_highscore(new_highscore)
+        if (score := self.get_game_value(self.HIGHSCORE_KEY)) != -1 and new_highscore > score:
+            self.set_game_value(self.HIGHSCORE_KEY, new_highscore)
             self.highscore = new_highscore
         else:
             self.highscore = score
 
-    def show(self):
+    def update_money(self, money_to_add):
+        if (money := self.get_game_value(self.MONEY_KEY)) != -1:
+            self.set_game_value(self.MONEY_KEY, money + money_to_add)
+
+    def show_revive_dialog(self):
+        """метод для показа диалога возрождения"""
+        if (money := self.get_game_value(self.MONEY_KEY)) != -1 and money >= self.revive_price:
+            if not self.revive_happened:
+                self.revive_happened = True
+                self.draw_revive = True
+
+    def draw_revive_dialog(self, win: pygame.Surface):
+        """метод для отрисовки диалога возрождения"""
+        if self.revive_countdown > 0:
+            pygame.draw.rect(win, (100, 100, 100),
+                             (50, 400, self.size[0] - 100, 150))
+            title = self.font.render(
+                "Do you want to continue?", True, (0, 0, 0))
+            time_remains = self.font.render(
+                str(self.revive_countdown // self.FPS + 1), True, (0, 0, 0))
+            win.blit(self.continue_button.image, self.continue_button.rect)
+            win.blit(title, ((self.size[0] - title.get_width()) // 2, 410))
+            win.blit(time_remains, (360, 475))
+            self.revive_countdown -= 1
+        else:
+            self.draw_revive = False
+
+    def restart(self):
+        self.revive_countdown = 5 * self.FPS
+        self.draw_revive = False
         self.restart_game = False
         self.load_main_menu = False
+        self.revive_game = False
+
+    def show(self):
+        self.restart()
+        self.show_revive_dialog()
         super().show()

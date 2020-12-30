@@ -31,10 +31,13 @@ class Game():
     def switch_scenes(self):
         if self.level.game_over:
             self.game_over_menu.set_score(self.level.get_score())
+            self.game_over_menu.update_money(self.level.get_collectde_money())
             self.game_over_menu.show()
         if self.game_over_menu.load_main_menu:
             self.main_menu.show()
-        if self.main_menu.load_level or self.game_over_menu.restart_game:
+        if self.game_over_menu.revive_game:
+            self.level.revive_game()
+        elif self.main_menu.load_level or self.game_over_menu.restart_game:
             self.level.restart()
             self.level.show()
 

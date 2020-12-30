@@ -1,3 +1,4 @@
+import json
 import pygame
 
 
@@ -44,6 +45,9 @@ class GameObject(pygame.sprite.Sprite):
     def __eq__(self, other):
         """метод для сравнения спрайтов"""
         return self._id == other._id
+
+    def __ne__(self, other):
+        return self._id != other._id
 
     @property
     def pos(self) -> tuple[int, int]:
@@ -116,6 +120,8 @@ class GameScene():
         self.clock = pygame.time.Clock()
         self.size = (self.display.get_width(), self.display.get_height())
         self.running = True
+        self.HIGHSCORE_KEY = "highscore"
+        self.MONEY_KEY = "money"
 
     def redraw(self, win: pygame.Surface):
         """метод для отрисовки на заданной поверхности"""
@@ -137,6 +143,31 @@ class GameScene():
             self.redraw(self.display)
             pygame.display.update()
             self.clock.tick(self.FPS)
+
+    def set_game_value(self, key, new_value):
+        """метод для обновления файла с игровыми сохранениями"""
+        try:
+            with open("values.json", "r+", encoding="u8") as f:
+                data = json.load(f)
+                data[key] = new_value
+                f.seek(0)
+                json.dump(data, f)
+                f.truncate()
+        except Exception as err:
+            print(err)
+
+    def get_game_value(self, key):
+        """метод для получения значения из файла игровых сохранений"""
+        try:
+            with open("values.json", "r", encoding="u8") as f:
+                data = json.load(f)
+        except Exception as err:
+            print(err)
+            result = -1
+        else:
+            result = data.get(key, -1)
+        finally:
+            return result
 
 
 class Group():
@@ -183,10 +214,19 @@ class Group():
         """Метод для удаления всех спрайтов из группы"""
         self.sprites.clear()
 
-    def get_collisions(self, target):
+    def get_collisions(self, target, ignore=None):
         """метод для получения спрайтов, с которыми столкнулся предеанный объект"""
-        return [sprite for sprite in self.sprites if target.collides(
-            sprite.rect)]
+        if ignore is None:
+            return [sprite for sprite in self.sprites if target.collides(
+                sprite.rect)]
+        else:
+            ignore = [el for el in ignore if el is not None]
+            return [sprite for sprite in self.sprites if target.collides(
+                sprite.rect) and sprite not in ignore]
+
+    def get_rect_collisions(self, rect):
+        """метод для получения коллизий ректа со спрайтами в группе"""
+        return [sprite for sprite in self.sprites if rect.colliderect(sprite.rect)]
 
     def __getitem__(self, index):
         try:
