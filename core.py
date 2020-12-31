@@ -122,6 +122,11 @@ class GameScene():
         self.running = True
         self.HIGHSCORE_KEY = "highscore"
         self.MONEY_KEY = "money"
+        self.MAGNET_KEY = "magnet"
+        self.SHIELD_KEY = "shield"
+        self.HAT_KEY = "hat"
+        self.JETPACK_KEY = "jetpack"
+        self.DAMAGE_KEY = "damage"
 
     def redraw(self, win: pygame.Surface):
         """метод для отрисовки на заданной поверхности"""

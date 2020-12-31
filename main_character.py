@@ -7,7 +7,7 @@ import pygame
 class MainCharacter(StaticGameObject):
     """Класс для создания главного персонажа"""
 
-    def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
+    def __init__(self, x, y, image_path, screen_size, upgrade=None, convert_alpha=True):
         super().__init__(x, y, image_path, screen_size, convert_alpha)
         self.width = self.image.get_width()
         self.height = self.image.get_height()
@@ -22,6 +22,7 @@ class MainCharacter(StaticGameObject):
         self.shield = None
         self.magnet = None
         self.magnet_rect = None
+        self.damage = upgrade if upgrade is not None else 40
         self.bullets = Group()
 
     def move_h(self, offset: int):
@@ -51,11 +52,9 @@ class MainCharacter(StaticGameObject):
         elif isinstance(coll, Enemy):
             if self.bottom > coll.top + 20 and self.shield is None:
                 self.game_over = True
-            else:
+            elif self.shield is None:
                 coll.delete()
-        # elif self.bottom >= coll.top and self.bottom <= coll.bottom:
         elif self.bottom <= coll.top + 10 and not self.has_item:
-            # if self.v_momentum > 1 and not self.has_item:
             self.rect.bottom = coll.rect.top
             self.jump()
         elif self.bottom - 10 > coll.top and self.v_momentum > 0 and not self.has_item:
@@ -89,7 +88,7 @@ class MainCharacter(StaticGameObject):
     def calculate_bullets_collisions(self, coll: pygame.sprite.Sprite):
         """метод для обработки столкновений пуль с объектом"""
         if self.bullets.get_collisions(coll):
-            coll.delete()
+            coll.take_damage(self.damage)
 
     def jump(self):
         """метод для прыжка от платформы"""

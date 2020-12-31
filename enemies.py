@@ -8,6 +8,7 @@ class Enemy(AnimatedGameObject):
     def __init__(self, x, y, images, screen_size, convert_alpha=True):
         super().__init__(x, y, images, screen_size, convert_alpha)
         self.horizontal_speed = 5
+        self.hp = 100
 
     def move_h(self):
         self.rect.x += self.horizontal_speed
@@ -19,12 +20,16 @@ class Enemy(AnimatedGameObject):
         super().update()
         self.move_h()
         self.scroll(scroll)
-        if self.y > self.screen_height:
+        if self.y > self.screen_height or self.hp <= 0:
             self.delete()
 
     def scroll(self, offset: int):
         """метод для сдвига платформы вниз по экрану"""
         self.rect.y += offset
+
+    def take_damage(self, damage: int):
+        """метод для нанесения урона"""
+        self.hp -= damage
 
 
 class FlyingEye(Enemy):

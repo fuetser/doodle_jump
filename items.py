@@ -77,11 +77,14 @@ class Spring(GameItem):
 class PropellerHat(FlyingGameItem):
     """Класс для создания шапки с пропеллером"""
 
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, upgrade=None):
         images = ["assets/items/hat32.png"]
         images += [f"assets/items/hat/{image}" for image in os.listdir(
             "assets/items/hat")]
-        super().__init__(x, y, images, screen_size, lifespan=180, speed=2)
+        speed = upgrade[0] if upgrade is not None else 2
+        lifespan = upgrade[1] if upgrade is not None else 180
+        super().__init__(
+            x, y, images, screen_size, lifespan=lifespan, speed=speed)
 
     def update(self, *args, **kwargs):
         player = kwargs.get("player")
@@ -110,11 +113,14 @@ class Trampoline(GameItem):
 class Jetpack(FlyingGameItem):
     """Класс для создание джетпака"""
 
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, upgrade=None):
         images = ["assets/items/jetpack48.png"]
         images += [f"assets/items/jetpack/{image}" for image in os.listdir(
             "assets/items/jetpack")]
-        super().__init__(x, y, images, screen_size, lifespan=240, speed=4)
+        speed = upgrade[0] if upgrade is not None else 3
+        lifespan = upgrade[1] if upgrade is not None else 240
+        super().__init__(
+            x, y, images, screen_size, lifespan=lifespan, speed=speed)
         self.facing_right = True
 
     def update(self, *args, **kwargs):
@@ -200,12 +206,12 @@ class GoldenCoin(Coin):
 class Shield(GameItem):
     """Класс для создания щита"""
 
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, upgrade=None):
         images = ["assets/items/shield32.png"]
         images += [f"assets/items/shield/{image}" for image in os.listdir(
             "assets/items/shield") for _ in range(3)]
         super().__init__(x, y, images, screen_size)
-        self.lifespan = 240
+        self.lifespan = upgrade if upgrade is not None else 240
         self.image = self.static_image
 
     def activate(self, player: pygame.sprite.Sprite):
@@ -230,14 +236,16 @@ class Shield(GameItem):
 
 
 class Magnet(GameItem):
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, upgrade=None):
         images = ["assets/items/magnet32.png"]
         images += [f"assets/items/magnet/{image}" for image in os.listdir(
             "assets/items/magnet") for _ in range(2)]
         super().__init__(x, y, images, screen_size)
-        self.lifespan = 240
+        self.diameter = upgrade[0] if upgrade is not None else 150
+        self.lifespan = upgrade[1] if upgrade is not None else 240
         self.image = self.static_image
-        self.coverage_area = pygame.Rect(x - 100, y - 100, 200, 200)
+        self.coverage_area = pygame.Rect(
+            x - 100, y - 100, self.diameter, self.diameter)
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:

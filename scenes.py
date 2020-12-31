@@ -1,6 +1,7 @@
 from core import GameScene, Group, StaticGameObject
 from enemies import FlyingEye
 from items import *
+import json
 from main_character import MainCharacter
 from platforms import Platform
 import pygame
@@ -12,12 +13,14 @@ class Level(GameScene):
 
     def __init__(self, display: pygame.Surface, fps=60):
         super(Level, self).__init__(display, fps)
+        self.load_upgrades()
+
         self.background = pygame.image.load(
             "assets/ui/cycled_bg.jpg").convert()
         self.bg_height = self.background.get_height()
         self.main_character = MainCharacter(200, 100,
                                             "assets/base_character72.png",
-                                            self.size)
+                                            self.size, self.damage_upgrade)
         # прямоугольник для проверки упал игрок вниз или нет
         self.bottom_rect = pygame.Rect(
             -100, self.size[0] - 2, self.size[1] + 200, 2)
@@ -54,28 +57,32 @@ class Level(GameScene):
             self.spawn_enemies()
 
     def spawn_objects(self, platform: Platform, x: int, y: int):
-        # if 0.1 < random.random() < 0.2:
-        #     spring = Spring(x + 10, y - 5, self.size)
-        #     platform.add_item(spring)
-        #     self.items.add(spring)
-        # elif 0.4 < random.random() < 0.5:
-        #     hat = PropellerHat(x + 10, y - 15, self.size)
-        #     platform.add_item(hat)
-        #     self.items.add(hat)
-        # elif 0.2 < random.random() < 0.3:
-        #     trampoline = Trampoline(x + 4, y - 15, self.size)
-        #     platform.add_item(trampoline)
-        #     self.items.add(trampoline)
-        # elif 0.3 < random.random() < 0.4:
-        #     jetpack = Jetpack(x + 13, y - 45, self.size)
-        #     platform.add_item(jetpack)
-        #     self.items.add(jetpack)
-        if 0.1 < random.random() < 0.3:
-            magnet = Magnet(x + 10, y - 25, self.size)
+        if 0.1 < random.random() < 0.2:
+            spring = Spring(x + 10, y - 5, self.size)
+            platform.add_item(spring)
+            self.items.add(spring)
+        elif 0.4 < random.random() < 0.5:
+            hat = PropellerHat(x + 10, y - 15, self.size, self.hat_upgrade)
+            platform.add_item(hat)
+            self.items.add(hat)
+        elif 0.2 < random.random() < 0.3:
+            trampoline = Trampoline(x + 4, y - 15, self.size)
+            platform.add_item(trampoline)
+            self.items.add(trampoline)
+        elif 0.3 < random.random() < 0.4:
+            jetpack = Jetpack(x + 13, y - 45, self.size, self.jetpack_upgrade)
+            platform.add_item(jetpack)
+            self.items.add(jetpack)
+        elif 0.4 < random.random() < 0.5:
+            coin = GoldenCoin(x + 10, y - 25, self.size)
+            platform.add_item(coin)
+            self.items.add(coin)
+        elif 0.5 < random.random() < 0.6:
+            magnet = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
             platform.add_item(magnet)
             self.items.add(magnet)
-        elif 0.3 < random.random() < 0.7:
-            shield = Shield(x + 10, y - 15, self.size)
+        elif 0.6 < random.random() < 0.7:
+            shield = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
             platform.add_item(shield)
             self.items.add(shield)
 
@@ -175,6 +182,24 @@ class Level(GameScene):
         elif self.move_left:
             self.main_character.move_h(-offset)
 
+    def load_upgrades(self):
+        """метод для загрузки прокачки игрока"""
+        self.load_upgrades_levels()
+        with open("upgrades.json", "r", encoding="u8") as f:
+            data = json.load(f)
+        self.magnet_upgrade = data.get(self.MAGNET_KEY).get(self.magnet_level)
+        self.shield_upgrade = data.get(self.SHIELD_KEY).get(self.shield_level)
+        self.hat_upgrade = data.get(self.HAT_KEY).get(self.hat_level)
+        self.jetpack_upgrade = data.get(self.JETPACK_KEY).get(self.jetpack_level)
+        self.damage_upgrade = data.get(self.DAMAGE_KEY).get(self.damage_level)
+
+    def load_upgrades_levels(self):
+        self.magnet_level = str(self.get_game_value(self.MAGNET_KEY))
+        self.shield_level = str(self.get_game_value(self.SHIELD_KEY))
+        self.hat_level = str(self.get_game_value(self.HAT_KEY))
+        self.jetpack_level = str(self.get_game_value(self.JETPACK_KEY))
+        self.damage_level = str(self.get_game_value(self.DAMAGE_KEY))
+
     def render_score(self):
         """Метод для рендера игрового счета"""
         return self.score_font.render(str(self.score), True, (0, 0, 0))
@@ -187,7 +212,7 @@ class Level(GameScene):
     def get_score(self) -> int:
         return self.score
 
-    def get_collectde_money(self) -> int:
+    def get_collected_money(self) -> int:
         return self.main_character.get_collected_money()
 
     def restart(self):
@@ -213,6 +238,10 @@ class Level(GameScene):
         self.move_right = False
         self.show()
 
+    def show(self):
+        self.load_upgrades()
+        super().show()
+
 
 class MainMenu(GameScene):
     """Класс для создания главного меню (пока пустой)"""
@@ -221,14 +250,19 @@ class MainMenu(GameScene):
         super(MainMenu, self).__init__(display, fps)
         self.background = pygame.image.load(
             "assets/ui/main_menu_bg.jpg").convert()
-        self.play_button = StaticGameObject(400, 150,
+        self.play_button = StaticGameObject(400, 125,
                                             "assets/ui/play_button.png",
                                             self.size, convert_alpha=True)
+        self.shop_button = StaticGameObject(400, 190,
+                                            "assets/ui/shop_button.png",
+                                            self.size, convert_alpha=True)
         self.load_level = False
+        self.load_shop = False
 
     def redraw(self, win):
         win.blit(self.background, (0, 0))
         win.blit(self.play_button.image, self.play_button.rect)
+        win.blit(self.shop_button.image, self.shop_button.rect)
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -240,9 +274,13 @@ class MainMenu(GameScene):
                 if self.play_button.collidepoint(event.pos):
                     self.load_level = True
                     self.close()
+                if self.shop_button.collidepoint(event.pos):
+                    self.load_shop = True
+                    self.close()
 
     def show(self):
         self.load_level = False
+        self.load_shop = False
         super().show()
 
 
@@ -355,3 +393,134 @@ class GameOverMenu(GameScene):
         self.restart()
         self.show_revive_dialog()
         super().show()
+
+
+class ShopMenu(GameScene):
+    """Класс для создания магазина"""
+
+    def __init__(self, display: pygame.Surface, fps=60):
+        super(ShopMenu, self).__init__(display, fps)
+        self.font = pygame.font.SysFont("cambriacambriamath", 32)
+        self.menu_button = StaticGameObject(50, 525,
+                                            "assets/ui/menu_button.png",
+                                            self.size, convert_alpha=True)
+        self.magnet_item = ShopItem(50, 25, self.size, "Magnet",
+                                    level=self.get_game_value(self.MAGNET_KEY))
+        self.shield_item = ShopItem(50, 150, self.size, "Shield",
+                                    level=self.get_game_value(self.SHIELD_KEY))
+        self.hat_item = ShopItem(50, 275, self.size, "Hat",
+                                 level=self.get_game_value(self.HAT_KEY))
+        self.jetpack_item = ShopItem(50, 400, self.size, "Jetpack",
+                                     level=self.get_game_value(self.JETPACK_KEY))
+        self.damage_item = ShopItem(300, 25, self.size, "Damage",
+                                    level=self.get_game_value(self.DAMAGE_KEY))
+        self.load_main_menu = False
+
+    def redraw(self, win):
+        win.fill((255, 255, 255))
+        win.blit(self.menu_button.image, self.menu_button.rect)
+        self.magnet_item.draw(win)
+        self.shield_item.draw(win)
+        self.hat_item.draw(win)
+        self.jetpack_item.draw(win)
+        self.damage_item.draw(win)
+        money = self.font.render(
+            f"{self.get_game_value(self.MONEY_KEY)}$", True, (0, 0, 0))
+        win.blit(money, (self.size[0] - money.get_width() - 25, 540))
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.menu_button.collidepoint(event.pos):
+                    self.load_main_menu = True
+                    self.close()
+                if self.magnet_item.clicked(event.pos):
+                    self.purchase_upgrade(
+                        key=self.MAGNET_KEY, item=self.magnet_item)
+                if self.shield_item.clicked(event.pos):
+                    self.purchase_upgrade(
+                        key=self.SHIELD_KEY, item=self.shield_item)
+                if self.hat_item.clicked(event.pos):
+                    self.purchase_upgrade(
+                        key=self.HAT_KEY, item=self.hat_item)
+                if self.jetpack_item.clicked(event.pos):
+                    self.purchase_upgrade(
+                        key=self.JETPACK_KEY, item=self.jetpack_item)
+                if self.damage_item.clicked(event.pos):
+                    self.purchase_upgrade(
+                        key=self.DAMAGE_KEY, item=self.damage_item)
+
+    def purchase_upgrade(self, key, item):
+        """метод для покупки улучшения"""
+        if (money := self.get_game_value(self.MONEY_KEY)) != -1:
+            if money >= item.price:
+                self.set_game_value(self.MONEY_KEY, money - item.price)
+                item.add_level()
+                self.set_game_value(key, item.level)
+
+    def show(self):
+        self.load_main_menu = False
+        super().show()
+
+
+class ShopItem(StaticGameObject):
+    """Класс для создания предметов магазина"""
+
+    def __init__(self, x, y, screen_size, title, level=0):
+        super().__init__(x, y, "assets/ui/upgrades_bar.png",
+                         screen_size, convert_alpha=True)
+        self.title_text = title
+        self.level = level
+        self.price = (self.level + 1) * 100
+        self.font = pygame.font.SysFont("cambriacambriamath", 32)
+        self.title = self.font.render(
+            f"{title} ({self.price if self.level < 5 else 'max'})",
+            True, (0, 0, 0))
+        self.title_pos = [
+            x + (self.image.get_width() - self.title.get_width()) // 2, y]
+        self.rect.y = y + self.title.get_height() + 10
+        self.plus_button = StaticGameObject(x, y,
+                                            "assets/ui/plus_button.png",
+                                            screen_size, convert_alpha=True)
+        self.plus_button.set_pos((self.rect.right - self.plus_button.rect.w,
+                                  y + self.title.get_height() + 10))
+        self.colors = (
+            (253, 245, 66),
+            (251, 216, 8),
+            (255, 144, 5),
+            (249, 83, 11),
+            (255, 0, 0)
+        )
+        if level > 0:
+            self.progress_rect = pygame.Rect(
+                self.x + 12, self.y + 11, 20 * self.level + 9 * (
+                    self.level - 1), 30)
+
+    def draw(self, win: pygame.Surface):
+        if self.level > 0:
+            pygame.draw.rect(
+                win, self.colors[self.level - 1], self.progress_rect)
+        win.blit(self.title, self.title_pos)
+        win.blit(self.image, self.rect)
+        win.blit(self.plus_button.image, self.plus_button.rect)
+
+    def add_level(self):
+        if self.level < 5:
+            self.level += 1
+            self.price = (self.level + 1) * 100
+            self.title = self.font.render(
+                f"{self.title_text} ({self.price if self.level < 5 else 'max'})",
+                True, (0, 0, 0))
+            self.title_pos[0] = self.x + (
+                self.image.get_width() - self.title.get_width()) // 2
+            self.progress_rect = pygame.Rect(self.x + 12, self.y + 11,
+                                             20 * self.level + 9 * (
+                                                 self.level - 1), 30)
+
+    def clicked(self, position):
+        """метод для проверки нажатия на кнопку"""
+        return self.plus_button.collidepoint(position)

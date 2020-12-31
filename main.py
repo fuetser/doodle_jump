@@ -13,13 +13,13 @@ class Game():
         self.FPS = fps
         self.clock = pygame.time.Clock()
         pygame.display.set_caption("Doodle Jump")
+        pygame.display.set_icon(
+            pygame.image.load("assets/base_character72.png").convert_alpha())
 
         self.main_menu = MainMenu(self.display, self.FPS)
         self.level = Level(self.display, self.FPS)
         self.game_over_menu = GameOverMenu(self.display, self.FPS)
-
-    def redraw(self, win: pygame.Surface):
-        pass
+        self.shop = ShopMenu(self.display, self.FPS)
 
     def handle_events(self):
         self.switch_scenes()
@@ -31,9 +31,13 @@ class Game():
     def switch_scenes(self):
         if self.level.game_over:
             self.game_over_menu.set_score(self.level.get_score())
-            self.game_over_menu.update_money(self.level.get_collectde_money())
+            self.game_over_menu.update_money(self.level.get_collected_money())
             self.game_over_menu.show()
-        if self.game_over_menu.load_main_menu:
+        if self.main_menu.load_shop:
+            self.shop.show()
+        if self.game_over_menu.load_main_menu or self.shop.load_main_menu:
+            self.shop.load_main_menu = False
+            self.game_over_menu.revive_happened = False
             self.main_menu.show()
         if self.game_over_menu.revive_game:
             self.level.revive_game()
@@ -45,7 +49,6 @@ class Game():
         self.main_menu.show()
         while True:
             self.handle_events()
-            self.redraw(self.display)
             pygame.display.update()
             self.clock.tick(self.FPS)
 
