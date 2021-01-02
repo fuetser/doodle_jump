@@ -1,22 +1,26 @@
 from core import AnimatedGameObject
 import os
 import pygame
+import random
 
 
 class GameItem(AnimatedGameObject):
     """Абстрактный класс для игрового предмета"""
+    sound = None
 
-    def __init__(self, x, y, images, screen_size, sound, volume,
-                 convert_alpha=True, create_static=True):
+    def __init__(self, x, y, images, screen_size, sound, volume, convert_alpha=True):
         super().__init__(x, y, images, screen_size, convert_alpha)
-        if create_static:
-            self.static_image = self.images.pop(0)
-            self.frames_amount -= 1
+        self.__class__.load_sound(sound, volume)
         self.activated = False
-        self.sound = pygame.mixer.Sound(sound)
-        self.sound.set_volume(volume)
         self.sound_length = self.sound.get_length()
         self.sound_timer = 0
+        self.collect_with_item = False
+
+    @classmethod
+    def load_sound(cls, file, volume):
+        if cls.sound is None:
+            cls.sound = pygame.mixer.Sound(file)
+            cls.sound.set_volume(volume)
 
     def activate(self, player: pygame.sprite.Sprite):
         """метод для применения эффекта предмета игроку"""
@@ -47,13 +51,14 @@ class FlyingGameItem(GameItem):
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
+            # self.sound.play()
             player.enable_gravity(False)
             player.set_flying_object(self)
             self.activated = True
 
     def on_delete(self, player: pygame.sprite.Sprite):
-        self.sound.stop()
         if self.activated:
+            self.sound.stop()
             player.enable_gravity(True)
             player.set_flying_object()
 
@@ -64,8 +69,8 @@ class Spring(GameItem):
     def __init__(self, x, y, screen_size):
         images = ("assets/items/spring16_opened.png",
                   "assets/items/spring16.png")
-        super().__init__(x, y, images, screen_size,
-                         "assets/sounds/spring.wav", volume=0.25)
+        super().__init__(
+            x, y, images, screen_size, "assets/sounds/spring.wav", volume=0.25)
         self.offset_made = False
 
     def activate(self, player: pygame.sprite.Sprite):
@@ -73,6 +78,7 @@ class Spring(GameItem):
             self.sound.play()
             self.activated = True
             player.set_momentum(-10)
+            player.spawn_particles()
 
     def update(self, *args, **kwargs):
         super().update(*args, **kwargs)
@@ -124,6 +130,7 @@ class Trampoline(GameItem):
     def activate(self, player: pygame.sprite.Sprite):
         self.sound.play()
         player.set_momentum(-15)
+        player.spawn_particles()
 
 
 class Jetpack(FlyingGameItem):
@@ -137,6 +144,7 @@ class Jetpack(FlyingGameItem):
         lifespan = upgrade[1] if upgrade is not None else 240
         super().__init__(x, y, images, screen_size, "assets/sounds/jetpack.wav",
                          volume=0.2, lifespan=lifespan, speed=speed)
+        self.image = self.static_image
         self.facing_right = True
 
     def update(self, *args, **kwargs):
@@ -149,6 +157,7 @@ class Jetpack(FlyingGameItem):
             self.set_pos(
                 (player.x + player.rect.w - 15 - player.rect.w * player.facing_right,
                  player.y + 5))
+            self.spawn_particles(player)
             if self.sound_timer <= 0:
                 self.sound.play()
                 self.sound_timer = self.sound_length
@@ -162,6 +171,14 @@ class Jetpack(FlyingGameItem):
         if self.facing_right != player_facing_right:
             self.image = pygame.transform.flip(self.image, True, False)
 
+    def spawn_particles(self, player: pygame.sprite.Sprite):
+        color = random.choice(((255, 77, 0), (255, 157, 0), (255, 234, 0)))
+        direction = -1 if player.facing_right else 1
+        player.spawn_particles(player.x + player.rect.w - (
+                               player.rect.w + 5) * player.facing_right + 8,
+                               player.y + 50, color, amount=5,
+                               direction=direction)
+
 
 class Coin(GameItem):
     """Абстрактный класс для создания монеток"""
@@ -169,14 +186,15 @@ class Coin(GameItem):
     def __init__(self, x, y, folder, screen_size, price, ignore_scroll=False):
         images = [f"{folder}/{image}" for image in os.listdir(folder)
                   for _ in range(3)]
-        super().__init__(x, y, images, screen_size, "assets/sounds/coin.wav",
-                         volume=0.3, create_static=False)
+        super().__init__(x, y, images, screen_size,
+                         "assets/sounds/coin.wav", volume=0.3)
         self.price = price
         self.ignore_scroll = ignore_scroll
         self.is_magnetized = False
         self.speed_x = 0
         self.speed_y = 0
         self.speed_coefficient = 13
+        self.collect_with_item = True
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
@@ -206,6 +224,7 @@ class BronzeCoin(Coin):
     """Класс для создания бронзовых монеток"""
 
     def __init__(self, x, y, screen_size, ignore_scroll=False):
+        # BronzeCoin.load_images(images, create_static=False)
         super().__init__(x, y, "assets/items/bronze_coin", screen_size,
                          price=1, ignore_scroll=ignore_scroll)
 
@@ -237,6 +256,7 @@ class Shield(GameItem):
                          "assets/sounds/shield.wav", volume=0.4)
         self.lifespan = upgrade if upgrade is not None else 240
         self.image = self.static_image
+        self.collect_with_item = True
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
@@ -265,6 +285,8 @@ class Shield(GameItem):
 
 
 class Magnet(GameItem):
+    """Класс для создания магнита"""
+
     def __init__(self, x, y, screen_size, upgrade=None):
         images = ["assets/items/magnet32.png"]
         images += [f"assets/items/magnet/{image}" for image in os.listdir(
@@ -276,6 +298,7 @@ class Magnet(GameItem):
         self.image = self.static_image
         self.coverage_area = pygame.Rect(
             x - 100, y - 100, self.diameter, self.diameter)
+        self.collect_with_item = True
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:

@@ -1,5 +1,6 @@
 import json
 import pygame
+import random
 
 
 class GameObject(pygame.sprite.Sprite):
@@ -86,20 +87,30 @@ class StaticGameObject(GameObject):
 
 class AnimatedGameObject(GameObject):
     """Абстрактный класс для создания анимированных игровых объеков"""
+    images = None
+    static_image = None
 
     def __init__(self, x, y, images, screen_size, convert_alpha=True):
         super().__init__(screen_size)
-        if convert_alpha:
-            self.images = [pygame.image.load(
-                image).convert_alpha() for image in images]
-        else:
-            self.images = [pygame.image.load(
-                image).convert() for image in images]
+        self.__class__.load_images(images)
         self.image = self.images[0]
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
         self.current_frame = 0
         self.frames_amount = len(self.images)
+
+    @classmethod
+    def load_images(cls, images, convert_alpha=True, create_static=True):
+        """метод для загрузки анимации спрайта"""
+        if cls.images is None:
+            if convert_alpha:
+                cls.images = [pygame.image.load(
+                    image).convert_alpha() for image in images]
+            else:
+                cls.images = [pygame.image.load(
+                    image).convert() for image in images]
+            if create_static and cls.static_image is None:
+                cls.static_image = cls.images.pop(0)
 
     def update(self, skip_frames=1):
         position = self.pos
@@ -113,13 +124,15 @@ class AnimatedGameObject(GameObject):
 class GameScene():
     """Абстрактный класс для игровой сцены/меню"""
 
-    def __init__(self, display: pygame.Surface, fps=60):
+    def __init__(self, display: pygame.Surface, manager, fps=60):
         # на принятой поверхности происхоит отрисовка сцены
         self.display = display  # объект из функции pygame.display.set_mode()
         self.FPS = fps
         self.clock = pygame.time.Clock()
         self.size = (self.display.get_width(), self.display.get_height())
         self.running = True
+        #  мэнэджер загрузки сцен
+        self.manager = manager
         self.HIGHSCORE_KEY = "highscore"
         self.MONEY_KEY = "money"
         self.MAGNET_KEY = "magnet"
@@ -213,6 +226,15 @@ class Group():
         else:
             raise TypeError("Wrong type for argument")
 
+    def raw_add(self, sprite):
+        """метод для добавления объектов, не наследующихся от спрайта"""
+        self.sprites.append(sprite)
+
+    def raw_draw(self, win):
+        """метод для отрисовки объектов, если у них есть метод draw(self, win)"""
+        for sprite in self.sprites:
+            sprite.draw(win)
+
     def remove(self, sprite: pygame.sprite.Sprite):
         """метод для удаления спрайта из группы"""
         if isinstance(sprite, pygame.sprite.Sprite):
@@ -260,3 +282,33 @@ class Group():
 
     def __len__(self):
         return len(self.sprites)
+
+
+class Particle():
+    """класс для создания частицы"""
+
+    def __init__(self, x, y, radius, color, lifespan=120, direction=1):
+        self.x_pos = x
+        self.y_pos = y
+        self.speed_x = random.random() * 5 * direction
+        self.color = color
+        self.gravity = 0.2
+        self.v_momentum = 3
+        self.radius = radius
+        self.lifespan = lifespan
+        self.to_delete = False
+
+    def draw(self, win):
+        self.update()
+        if self.lifespan > 0 and self.radius > 0:
+            pygame.draw.circle(
+                win, self.color, (self.x_pos, self.y_pos), self.radius)
+        else:
+            self.to_delete = True
+
+    def update(self):
+        self.radius -= random.random()
+        self.x_pos += self.speed_x
+        self.v_momentum += self.gravity
+        self.y_pos += self.v_momentum
+        self.lifespan -= 1

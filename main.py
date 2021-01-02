@@ -18,42 +18,58 @@ class Game():
         pygame.display.set_icon(
             pygame.image.load("assets/base_character72.png").convert_alpha())
 
-        self.main_menu = MainMenu(self.display, self.FPS)
-        self.level = Level(self.display, self.FPS)
-        self.game_over_menu = GameOverMenu(self.display, self.FPS)
-        self.shop = ShopMenu(self.display, self.FPS)
+        self.main_menu = MainMenu(self.display, self, self.FPS)
+        self.level = Level(self.display, self, self.FPS)
+        self.game_over_menu = GameOverMenu(self.display, self, self.FPS)
+        self.shop = ShopMenu(self.display, self, self.FPS)
 
-    def handle_events(self):
-        self.switch_scenes()
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
+        self.load_main_menu = True
+        self.load_level = False
+        self.load_game_over_menu = False
+        self.revive_level = False
+        self.load_shop = False
 
     def switch_scenes(self):
-        if self.main_menu.load_shop:
-            self.shop.show()
-            self.level.game_over = False
-        if self.level.game_over:
+        """метод для переключения сцен в зависимости от флагов"""
+        if self.load_main_menu:
+            self.main_menu.show()
+        elif self.load_level:
+            self.level.restart()
+            self.level.show()
+        elif self.revive_level:
+            self.level.revive_game()
+        elif self.load_game_over_menu:
             self.game_over_menu.set_score(self.level.get_score())
             self.game_over_menu.update_money(self.level.get_collected_money())
             self.game_over_menu.show()
-        if self.game_over_menu.load_main_menu or self.shop.load_main_menu:
-            self.shop.load_main_menu = False
-            self.game_over_menu.revive_happened = False
-            self.main_menu.show()
-        if self.game_over_menu.revive_game:
-            self.level.revive_game()
-        elif self.main_menu.load_level or self.game_over_menu.restart_game:
-            self.level.restart()
-            self.level.show()
+        elif self.load_shop:
+            self.shop.show()
+
+    def load_scene(self, index):
+        """метод для загрузки сцены"""
+        self.reset_flags()
+        if index == 0:
+            self.load_main_menu = True
+        elif index == 1:
+            self.load_level = True
+        elif index == 2:
+            self.load_game_over_menu = True
+        elif index == 3:
+            self.revive_level = True
+        elif index == 4:
+            self.load_shop = True
+
+    def reset_flags(self):
+        """метод для сброса значений флагов загрузки сцен"""
+        self.load_main_menu = False
+        self.load_level = False
+        self.load_game_over_menu = False
+        self.load_shop = False
+        self.revive_level = False
 
     def run(self):
-        self.main_menu.show()
         while True:
-            self.handle_events()
-            pygame.display.update()
-            self.clock.tick(self.FPS)
+            self.switch_scenes()
 
 
 if __name__ == '__main__':

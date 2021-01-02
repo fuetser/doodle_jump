@@ -11,8 +11,8 @@ import random
 class Level(GameScene):
     """Класс для создания уровня"""
 
-    def __init__(self, display: pygame.Surface, fps=60):
-        super(Level, self).__init__(display, fps)
+    def __init__(self, display: pygame.Surface, manager, fps=60):
+        super(Level, self).__init__(display, manager, fps)
         self.load_upgrades()
 
         self.background = pygame.image.load(
@@ -41,7 +41,6 @@ class Level(GameScene):
 
         self.score_font = pygame.font.SysFont("cambriacambriamath", 30)
         self.score = 0
-        self.game_over = False
         self.enemy_height = 0
         self.coin = GoldenCoin(500, 15, self.size, ignore_scroll=True)
 
@@ -60,34 +59,34 @@ class Level(GameScene):
             self.spawn_enemies()
 
     def spawn_objects(self, platform: Platform, x: int, y: int):
-        if 0.1 < random.random() < 0.2:
-            spring = Spring(x + 10, y - 5, self.size)
-            platform.add_item(spring)
-            self.items.add(spring)
-        elif 0.2 < random.random() < 0.3:
-            hat = PropellerHat(x + 10, y - 15, self.size, self.hat_upgrade)
-            platform.add_item(hat)
-            self.items.add(hat)
-        elif 0.2 < random.random() < 0.3:
-            trampoline = Trampoline(x + 4, y - 15, self.size)
-            platform.add_item(trampoline)
-            self.items.add(trampoline)
-        elif 0.35 < random.random() < 0.4:
+        # if 0.1 < random.random() < 0.2:
+        #     spring = Spring(x + 10, y - 5, self.size)
+        #     platform.add_item(spring)
+        #     self.items.add(spring)
+        # elif 0.2 < random.random() < 0.3:
+        #     hat = PropellerHat(x + 10, y - 25, self.size, self.hat_upgrade)
+        #     platform.add_item(hat)
+        #     self.items.add(hat)
+        # elif 0.2 < random.random() < 0.3:
+        #     trampoline = Trampoline(x + 4, y - 15, self.size)
+        #     platform.add_item(trampoline)
+        #     self.items.add(trampoline)
+        if 0 < random.random() < 0.4:
             jetpack = Jetpack(x + 13, y - 45, self.size, self.jetpack_upgrade)
             platform.add_item(jetpack)
             self.items.add(jetpack)
-        elif 0.4 < random.random() < 0.5:
-            coin = SilverCoin(x + 10, y - 25, self.size)
-            platform.add_item(coin)
-            self.items.add(coin)
-        elif 0.5 < random.random() < 0.6:
-            magnet = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
-            platform.add_item(magnet)
-            self.items.add(magnet)
-        elif 0.6 < random.random() < 0.7:
-            shield = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
-            platform.add_item(shield)
-            self.items.add(shield)
+        # elif 0.4 < random.random() < 0.5:
+        #     coin = SilverCoin(x + 10, y - 25, self.size)
+        #     platform.add_item(coin)
+        #     self.items.add(coin)
+        # elif 0.5 < random.random() < 0.6:
+        #     magnet = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
+        #     platform.add_item(magnet)
+        #     self.items.add(magnet)
+        # elif 0.6 < random.random() < 0.7:
+        #     shield = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
+        #     platform.add_item(shield)
+        #     self.items.add(shield)
 
     def spawn_enemies(self):
         """метод для спавна врагов"""
@@ -106,7 +105,7 @@ class Level(GameScene):
             self.main_character.process_magnet_collisions(group)
 
         if self.main_character.collides(self.bottom_rect) or self.main_character.game_over:
-            self.game_over = True
+            self.manager.load_scene(2)
             self.lose_sound.play()
             self.items.clear()
             self.mute_sounds()
@@ -226,7 +225,6 @@ class Level(GameScene):
 
     def restart(self):
         """Метод для перезапуска игры"""
-        self.game_over = False
         self.main_character.reset()
         self.score = 0
         self.bg_pos = -self.background.get_height() + self.size[1]
@@ -255,8 +253,8 @@ class Level(GameScene):
 class MainMenu(GameScene):
     """Класс для создания главного меню (пока пустой)"""
 
-    def __init__(self, display: pygame.Surface, fps=60):
-        super(MainMenu, self).__init__(display, fps)
+    def __init__(self, display: pygame.Surface, manager, fps=60):
+        super(MainMenu, self).__init__(display, manager, fps)
         self.background = pygame.image.load(
             "assets/ui/main_menu_bg.jpg").convert()
         self.play_button = StaticGameObject(400, 125,
@@ -265,8 +263,6 @@ class MainMenu(GameScene):
         self.shop_button = StaticGameObject(400, 190,
                                             "assets/ui/shop_button.png",
                                             self.size, convert_alpha=True)
-        self.load_level = False
-        self.load_shop = False
         self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
         self.click_sound.set_volume(0.4)
 
@@ -283,11 +279,11 @@ class MainMenu(GameScene):
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.play_button.collidepoint(event.pos):
-                    self.load_level = True
+                    self.manager.load_scene(1)
                     self.click_sound.play()
                     self.close()
                 if self.shop_button.collidepoint(event.pos):
-                    self.load_shop = True
+                    self.manager.load_scene(4)
                     self.click_sound.play()
                     self.close()
 
@@ -300,12 +296,12 @@ class MainMenu(GameScene):
 class GameOverMenu(GameScene):
     """Класс для создание меню после проигрыша"""
 
-    def __init__(self, display: pygame.Surface, fps=60):
-        super(GameOverMenu, self).__init__(display, fps)
+    def __init__(self, display: pygame.Surface, manager, fps=60):
+        super(GameOverMenu, self).__init__(display, manager, fps)
         self.score = 0
         self.highscore = 0
         self.font = pygame.font.SysFont("cambriacambriamath", 40)
-        self.restart_button = StaticGameObject(220, 210,
+        self.restart_button = StaticGameObject(220, 230,
                                                "assets/ui/restart_button.png",
                                                self.size, convert_alpha=True)
         self.menu_button = StaticGameObject(220, 300,
@@ -316,9 +312,6 @@ class GameOverMenu(GameScene):
                                                 self.size, convert_alpha=True)
         self.click_sound = pygame.mixer.Sound("assets/sounds/click.wav")
         self.click_sound.set_volume(0.6)
-        self.restart_game = False
-        self.load_main_menu = False
-        self.revive_game = False
         self.revive_price = 250
         self.revive_countdown = 5 * self.FPS
         self.revive_happened = False
@@ -346,17 +339,19 @@ class GameOverMenu(GameScene):
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.restart_button.collidepoint(event.pos):
-                    self.restart_game = True
-                    self.revive_happened = False
+                    self.manager.load_scene(1)
                     self.click_sound.play()
+                    self.revive_happened = False
                     self.close()
                 if self.menu_button.collidepoint(event.pos):
-                    self.load_main_menu = True
+                    self.manager.load_scene(0)
                     self.click_sound.play()
+                    self.revive_happened = False
                     self.close()
                 if self.draw_revive and self.continue_button.collidepoint(event.pos):
-                    self.revive_game = True
+                    self.manager.load_scene(3)
                     self.update_money(-self.revive_price)
+                    self.revive_happened = True
                     self.click_sound.play()
                     self.close()
 
@@ -381,7 +376,6 @@ class GameOverMenu(GameScene):
         """метод для показа диалога возрождения"""
         if (money := self.get_game_value(self.MONEY_KEY)) != -1 and money >= self.revive_price:
             if not self.revive_happened:
-                self.revive_happened = True
                 self.draw_revive = True
 
     def draw_revive_dialog(self, win: pygame.Surface):
@@ -405,7 +399,6 @@ class GameOverMenu(GameScene):
         self.draw_revive = False
         self.restart_game = False
         self.load_main_menu = False
-        self.revive_game = False
 
     def show(self):
         self.restart()
@@ -416,8 +409,8 @@ class GameOverMenu(GameScene):
 class ShopMenu(GameScene):
     """Класс для создания магазина"""
 
-    def __init__(self, display: pygame.Surface, fps=60):
-        super(ShopMenu, self).__init__(display, fps)
+    def __init__(self, display: pygame.Surface, manager, fps=60):
+        super(ShopMenu, self).__init__(display, manager, fps)
         self.load_upgrades_levels()
         self.font = pygame.font.SysFont("cambriacambriamath", 32)
         self.menu_button = StaticGameObject(50, 525,
@@ -433,7 +426,6 @@ class ShopMenu(GameScene):
                                      level=self.jetpack_level)
         self.damage_item = ShopItem(300, 25, self.size, "Damage",
                                     level=self.damage_level)
-        self.load_main_menu = False
         self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
         self.upgrade_sound = pygame.mixer.Sound(
             "assets/sounds/upgrade_unlock.wav")
@@ -460,7 +452,7 @@ class ShopMenu(GameScene):
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.menu_button.collidepoint(event.pos):
-                    self.load_main_menu = True
+                    self.manager.load_scene(0)
                     self.click_sound.play()
                     self.close()
                 if self.magnet_item.clicked(event.pos):

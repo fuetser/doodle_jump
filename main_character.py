@@ -1,4 +1,4 @@
-from core import StaticGameObject, Group
+from core import StaticGameObject, Group, Particle
 from enemies import Enemy
 from items import GameItem, Coin
 import pygame
@@ -28,6 +28,7 @@ class MainCharacter(StaticGameObject):
         self.jump_sound.set_volume(0.45)
         self.shoot_sound.set_volume(0.3)
         self.bullets = Group()
+        self.particles = Group()
 
     def move_h(self, offset: int):
         """метод для перемещения персонажа по горизонтали
@@ -51,12 +52,13 @@ class MainCharacter(StaticGameObject):
     def process_collision(self, coll: pygame.sprite.Sprite):
         """метод для обработки столкновений"""
         scroll = True
-        if isinstance(coll, GameItem) and not self.has_item:
-            coll.activate(self)
+        if isinstance(coll, GameItem):
+            if coll.collect_with_item or not self.has_item:
+                coll.activate(self)
         elif isinstance(coll, Enemy):
             if self.bottom > coll.top + 20 and self.shield is None:
                 self.game_over = True
-            elif self.shield is None:
+            else:
                 coll.delete()
         elif self.bottom <= coll.top + 10 and not self.has_item:
             self.rect.bottom = coll.rect.top
@@ -99,6 +101,7 @@ class MainCharacter(StaticGameObject):
         """метод для прыжка от платформы"""
         self.jump_sound.play()
         self.set_momentum(-5)
+        self.spawn_particles()
 
     def update(self, enemy=None):
         self.move_v()
@@ -106,9 +109,18 @@ class MainCharacter(StaticGameObject):
         if enemy is not None:
             self.calculate_bullets_collisions(enemy)
 
+    def spawn_particles(self, x=None, y=None, color="white",
+                        radius=8, amount=10, direction=1):
+        x = self.rect.center[0] if x is None else x
+        y = self.bottom if y is None else y
+        for _ in range(amount):
+            self.particles.raw_add(
+                Particle(x, y, radius, color, direction=direction))
+
     def draw(self, win: pygame.Surface):
         win.blit(self.image, self.rect)
         self.bullets.draw(win)
+        self.particles.raw_draw(win)
 
     def add_momentum(self, amount: int):
         """метод для изменения ускорения игрока"""
