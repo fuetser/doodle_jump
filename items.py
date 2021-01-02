@@ -109,6 +109,7 @@ class PropellerHat(FlyingGameItem):
             super().update(skip_frames=3)
             self.set_pos((player.x + 30 - 23 * player.facing_right,
                           player.y - 25))
+            self.spawn_particles(player)
             self.lifespan -= 1
             if self.sound_timer <= 0:
                 self.sound.play()
@@ -117,6 +118,11 @@ class PropellerHat(FlyingGameItem):
                 self.sound_timer -= 0.025
         if self.lifespan == 0 or self.y > self.screen_height:
             self.delete(player)
+
+    def spawn_particles(self, player: pygame.sprite.Sprite):
+        color = random.choice(((64, 64, 64), (128, 128, 128), (192, 192, 192)))
+        player.spawn_particles(*self.rect.center, color,
+                               direction=random.choice((-1, 1)), amount=1)
 
 
 class Trampoline(GameItem):
@@ -176,7 +182,7 @@ class Jetpack(FlyingGameItem):
         direction = -1 if player.facing_right else 1
         player.spawn_particles(player.x + player.rect.w - (
                                player.rect.w + 5) * player.facing_right + 8,
-                               player.y + 50, color, amount=5,
+                               player.y + 53, color, amount=5,
                                direction=direction)
 
 
@@ -201,6 +207,7 @@ class Coin(GameItem):
             self.sound.play()
             self.activated = True
             player.add_money(self.price)
+            self.spawn_particles(player)
             self.delete()
 
     def update(self, *args, **kwargs):
@@ -211,6 +218,9 @@ class Coin(GameItem):
                 self.rect.y -= self.speed_y
         else:
             super().update()
+
+    def spawn_particles(self, player: pygame.sprite.Sprite):
+        player.spawn_explosion(*self.rect.center, self.colors, radius=(1, 10))
 
     def magnetize(self, pos_x, pos_y):
         """метод для передвижения монетки к игроку при примагничивании"""
@@ -227,6 +237,7 @@ class BronzeCoin(Coin):
         # BronzeCoin.load_images(images, create_static=False)
         super().__init__(x, y, "assets/items/bronze_coin", screen_size,
                          price=1, ignore_scroll=ignore_scroll)
+        self.colors = ((205, 127, 50), (110, 58, 7), (195, 131, 79))
 
 
 class SilverCoin(Coin):
@@ -235,6 +246,7 @@ class SilverCoin(Coin):
     def __init__(self, x, y, screen_size, ignore_scroll=False):
         super().__init__(x, y, "assets/items/silver_coin", screen_size,
                          price=5, ignore_scroll=ignore_scroll)
+        self.colors = ((208, 210, 209), (168, 169, 173), (117, 117, 117))
 
 
 class GoldenCoin(Coin):
@@ -243,6 +255,7 @@ class GoldenCoin(Coin):
     def __init__(self, x, y, screen_size, ignore_scroll=False):
         super().__init__(x, y, "assets/items/golden_coin", screen_size,
                          price=10, ignore_scroll=ignore_scroll)
+        self.colors = ((255, 215, 0), (229, 146, 2), (255, 247, 122))
 
 
 class Shield(GameItem):

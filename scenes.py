@@ -59,34 +59,42 @@ class Level(GameScene):
             self.spawn_enemies()
 
     def spawn_objects(self, platform: Platform, x: int, y: int):
-        # if 0.1 < random.random() < 0.2:
-        #     spring = Spring(x + 10, y - 5, self.size)
-        #     platform.add_item(spring)
-        #     self.items.add(spring)
-        # elif 0.2 < random.random() < 0.3:
-        #     hat = PropellerHat(x + 10, y - 25, self.size, self.hat_upgrade)
-        #     platform.add_item(hat)
-        #     self.items.add(hat)
-        # elif 0.2 < random.random() < 0.3:
-        #     trampoline = Trampoline(x + 4, y - 15, self.size)
-        #     platform.add_item(trampoline)
-        #     self.items.add(trampoline)
-        if 0 < random.random() < 0.4:
+        if 0.1 < random.random() < 0.2:
+            spring = Spring(x + 10, y - 5, self.size)
+            platform.add_item(spring)
+            self.items.add(spring)
+        elif 0.2 < random.random() < 0.3:
+            hat = PropellerHat(x + 10, y - 30, self.size, self.hat_upgrade)
+            platform.add_item(hat)
+            self.items.add(hat)
+        elif 0.2 < random.random() < 0.3:
+            trampoline = Trampoline(x + 4, y - 15, self.size)
+            platform.add_item(trampoline)
+            self.items.add(trampoline)
+        elif 0.3 < random.random() < 0.4:
             jetpack = Jetpack(x + 13, y - 45, self.size, self.jetpack_upgrade)
             platform.add_item(jetpack)
             self.items.add(jetpack)
-        # elif 0.4 < random.random() < 0.5:
-        #     coin = SilverCoin(x + 10, y - 25, self.size)
-        #     platform.add_item(coin)
-        #     self.items.add(coin)
-        # elif 0.5 < random.random() < 0.6:
-        #     magnet = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
-        #     platform.add_item(magnet)
-        #     self.items.add(magnet)
-        # elif 0.6 < random.random() < 0.7:
-        #     shield = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
-        #     platform.add_item(shield)
-        #     self.items.add(shield)
+        elif 0.4 < random.random() < 0.5:
+            coin = BronzeCoin(x + 10, y - 25, self.size)
+            platform.add_item(coin)
+            self.items.add(coin)
+        elif 0.7 < random.random() < 0.8:
+            coin = SilverCoin(x + 10, y - 25, self.size)
+            platform.add_item(coin)
+            self.items.add(coin)
+        elif 0.8 < random.random() < 0.9:
+            coin = GoldenCoin(x + 10, y - 25, self.size)
+            platform.add_item(coin)
+            self.items.add(coin)
+        elif 0.5 < random.random() < 0.6:
+            magnet = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
+            platform.add_item(magnet)
+            self.items.add(magnet)
+        elif 0.6 < random.random() < 0.7:
+            shield = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
+            platform.add_item(shield)
+            self.items.add(shield)
 
     def spawn_enemies(self):
         """метод для спавна врагов"""

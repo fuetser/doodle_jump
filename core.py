@@ -287,13 +287,13 @@ class Group():
 class Particle():
     """класс для создания частицы"""
 
-    def __init__(self, x, y, radius, color, lifespan=120, direction=1):
+    def __init__(self, x, y, radius, color, lifespan=120, direction=1, momentum=3):
         self.x_pos = x
         self.y_pos = y
         self.speed_x = random.random() * 5 * direction
         self.color = color
         self.gravity = 0.2
-        self.v_momentum = 3
+        self.v_momentum = momentum
         self.radius = radius
         self.lifespan = lifespan
         self.to_delete = False

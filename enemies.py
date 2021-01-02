@@ -10,6 +10,8 @@ class Enemy(AnimatedGameObject):
         super().__init__(x, y, images, screen_size, convert_alpha)
         self.horizontal_speed = 5
         self.hp = 100
+        self.blood_colors = ((254, 132, 132), (254, 92, 92), (254, 32, 32),
+                             (186, 0, 0), (107, 0, 0), (83, 0, 0))
 
     def move_h(self):
         self.rect.x += self.horizontal_speed

@@ -2,6 +2,7 @@ from core import StaticGameObject, Group, Particle
 from enemies import Enemy
 from items import GameItem, Coin
 import pygame
+import random
 
 
 class MainCharacter(StaticGameObject):
@@ -23,6 +24,8 @@ class MainCharacter(StaticGameObject):
         self.magnet = None
         self.magnet_rect = None
         self.damage = upgrade if upgrade is not None else 40
+        self.shoot_colors = (
+            (187, 210, 102), (127, 163, 1), (70, 91, 0), (204, 221, 141))
         self.jump_sound = pygame.mixer.Sound("assets/sounds/jump.wav")
         self.shoot_sound = pygame.mixer.Sound("assets/sounds/shoot.wav")
         self.jump_sound.set_volume(0.45)
@@ -91,17 +94,24 @@ class MainCharacter(StaticGameObject):
         bullet.shoot(target_x, target_y)
         self.bullets.add(bullet)
         self.shoot_sound.play()
+        self.spawn_explosion(x_pos, self.y + 15, self.shoot_colors)
 
     def calculate_bullets_collisions(self, coll: pygame.sprite.Sprite):
         """метод для обработки столкновений пуль с объектом"""
-        if self.bullets.get_collisions(coll):
+        if (collisions := self.bullets.get_collisions(coll)):
             coll.take_damage(self.damage)
+            for collision in collisions:
+                self.spawn_explosion(
+                    *collision.pos, coll.blood_colors, radius=(2, 12))
+                collision.delete()
 
     def jump(self):
         """метод для прыжка от платформы"""
         self.jump_sound.play()
         self.set_momentum(-5)
-        self.spawn_particles()
+        for _ in range(20):
+            self.spawn_particles(amount=1, radius=random.randrange(4, 10),
+                                 momentum=random.randrange(0, 3))
 
     def update(self, enemy=None):
         self.move_v()
@@ -110,12 +120,25 @@ class MainCharacter(StaticGameObject):
             self.calculate_bullets_collisions(enemy)
 
     def spawn_particles(self, x=None, y=None, color="white",
-                        radius=8, amount=10, direction=1):
+                        radius=8, amount=10, direction=None, momentum=3):
+        direction = random.choice((-1, 1)) if direction is None else direction
         x = self.rect.center[0] if x is None else x
         y = self.bottom if y is None else y
         for _ in range(amount):
-            self.particles.raw_add(
-                Particle(x, y, radius, color, direction=direction))
+            self.particles.raw_add(Particle(x, y, radius, color,
+                                            direction=direction,
+                                            momentum=momentum))
+
+    def spawn_explosion(self, x, y, colors, amount=2, radius=(2, 8),
+                        repeat=25, momentum=4):
+        """метод для спавна взрыва из частиц"""
+        for _ in range(repeat):
+            direction = random.choice((-1, 1))
+            res_momentum = random.randrange(-momentum, momentum)
+            res_radius = random.randint(*radius)
+            color = random.choice(colors)
+            self.spawn_particles(x, y, color, amount=amount, radius=res_radius,
+                                 direction=direction, momentum=res_momentum)
 
     def draw(self, win: pygame.Surface):
         win.blit(self.image, self.rect)
@@ -172,6 +195,7 @@ class MainCharacter(StaticGameObject):
         self.magnet = None
         self.magent_rect = None
         self.bullets.clear()
+        self.particles.clear()
 
 
 class Bullet(StaticGameObject):
@@ -187,12 +211,6 @@ class Bullet(StaticGameObject):
         """метод для старта полета пули в определенном направлении"""
         self.speed_x = int((self.x - target_x) / self.speed_coefficient)
         self.speed_y = int((self.y - target_y) / self.speed_coefficient)
-        # self.speed_x = self.speed_coefficient
-        # if self.x < target_x:
-        #     self.speed_x *= -1
-        # self.speed_y = self.speed_coefficient
-        # if self.y < target_y:
-        #     self.speed_y *= -1
 
     def update(self):
         self.rect.x -= self.speed_x
