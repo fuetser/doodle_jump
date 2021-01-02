@@ -114,8 +114,10 @@ class MainCharacter(StaticGameObject):
                                  momentum=random.randrange(0, 3))
 
     def update(self, enemy=None):
+        print(len(self.particles))
         self.move_v()
         self.bullets.update()
+        self.particles.update()
         if enemy is not None:
             self.calculate_bullets_collisions(enemy)
 

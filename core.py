@@ -299,12 +299,9 @@ class Particle():
         self.to_delete = False
 
     def draw(self, win):
-        self.update()
         if self.lifespan > 0 and self.radius > 0:
             pygame.draw.circle(
                 win, self.color, (self.x_pos, self.y_pos), self.radius)
-        else:
-            self.to_delete = True
 
     def update(self):
         self.radius -= random.random()
@@ -312,3 +309,5 @@ class Particle():
         self.v_momentum += self.gravity
         self.y_pos += self.v_momentum
         self.lifespan -= 1
+        if self.lifespan <= 0 or self.radius <= 0:
+            self.to_delete = True
