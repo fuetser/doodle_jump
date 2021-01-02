@@ -6,12 +6,17 @@ import pygame
 class GameItem(AnimatedGameObject):
     """Абстрактный класс для игрового предмета"""
 
-    def __init__(self, x, y, images, screen_size, convert_alpha=True, create_static=True):
+    def __init__(self, x, y, images, screen_size, sound, volume,
+                 convert_alpha=True, create_static=True):
         super().__init__(x, y, images, screen_size, convert_alpha)
         if create_static:
             self.static_image = self.images.pop(0)
             self.frames_amount -= 1
         self.activated = False
+        self.sound = pygame.mixer.Sound(sound)
+        self.sound.set_volume(volume)
+        self.sound_length = self.sound.get_length()
+        self.sound_timer = 0
 
     def activate(self, player: pygame.sprite.Sprite):
         """метод для применения эффекта предмета игроку"""
@@ -33,9 +38,10 @@ class GameItem(AnimatedGameObject):
 class FlyingGameItem(GameItem):
     """Абстрактный класс для создания летающих игровых объектов"""
 
-    def __init__(self, x, y, images, screen_size, convert_alpha=True,
-                 lifespan=120, speed=2):
-        super().__init__(x, y, images, screen_size, convert_alpha)
+    def __init__(self, x, y, images, screen_size, sound, volume,
+                 convert_alpha=True, lifespan=120, speed=2):
+        super().__init__(
+            x, y, images, screen_size, sound, volume, convert_alpha)
         self.lifespan = lifespan
         self.speed = speed
 
@@ -46,6 +52,7 @@ class FlyingGameItem(GameItem):
             self.activated = True
 
     def on_delete(self, player: pygame.sprite.Sprite):
+        self.sound.stop()
         if self.activated:
             player.enable_gravity(True)
             player.set_flying_object()
@@ -57,11 +64,13 @@ class Spring(GameItem):
     def __init__(self, x, y, screen_size):
         images = ("assets/items/spring16_opened.png",
                   "assets/items/spring16.png")
-        super().__init__(x, y, images, screen_size)
+        super().__init__(x, y, images, screen_size,
+                         "assets/sounds/spring.wav", volume=0.25)
         self.offset_made = False
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
+            self.sound.play()
             self.activated = True
             player.set_momentum(-10)
 
@@ -83,8 +92,8 @@ class PropellerHat(FlyingGameItem):
             "assets/items/hat")]
         speed = upgrade[0] if upgrade is not None else 2
         lifespan = upgrade[1] if upgrade is not None else 180
-        super().__init__(
-            x, y, images, screen_size, lifespan=lifespan, speed=speed)
+        super().__init__(x, y, images, screen_size, "assets/sounds/hat.wav",
+                         volume=0.4, lifespan=lifespan, speed=speed)
 
     def update(self, *args, **kwargs):
         player = kwargs.get("player")
@@ -95,6 +104,11 @@ class PropellerHat(FlyingGameItem):
             self.set_pos((player.x + 30 - 23 * player.facing_right,
                           player.y - 25))
             self.lifespan -= 1
+            if self.sound_timer <= 0:
+                self.sound.play()
+                self.sound_timer = self.sound_length
+            else:
+                self.sound_timer -= 0.025
         if self.lifespan == 0 or self.y > self.screen_height:
             self.delete(player)
 
@@ -104,9 +118,11 @@ class Trampoline(GameItem):
 
     def __init__(self, x, y, screen_size):
         images = ["assets/items/trampoline64.png"] * 2
-        super().__init__(x, y, images, screen_size)
+        super().__init__(x, y, images, screen_size,
+                         "assets/sounds/trampoline.wav", volume=0.25)
 
     def activate(self, player: pygame.sprite.Sprite):
+        self.sound.play()
         player.set_momentum(-15)
 
 
@@ -119,8 +135,8 @@ class Jetpack(FlyingGameItem):
             "assets/items/jetpack")]
         speed = upgrade[0] if upgrade is not None else 3
         lifespan = upgrade[1] if upgrade is not None else 240
-        super().__init__(
-            x, y, images, screen_size, lifespan=lifespan, speed=speed)
+        super().__init__(x, y, images, screen_size, "assets/sounds/jetpack.wav",
+                         volume=0.2, lifespan=lifespan, speed=speed)
         self.facing_right = True
 
     def update(self, *args, **kwargs):
@@ -133,6 +149,11 @@ class Jetpack(FlyingGameItem):
             self.set_pos(
                 (player.x + player.rect.w - 15 - player.rect.w * player.facing_right,
                  player.y + 5))
+            if self.sound_timer <= 0:
+                self.sound.play()
+                self.sound_timer = self.sound_length
+            else:
+                self.sound_timer -= 0.01
             self.lifespan -= 1
         if self.lifespan == 0 or self.y > self.screen_height:
             self.delete(player)
@@ -140,7 +161,6 @@ class Jetpack(FlyingGameItem):
     def rotate_image(self, player_facing_right):
         if self.facing_right != player_facing_right:
             self.image = pygame.transform.flip(self.image, True, False)
-            # self.facing_right = player_facing_right
 
 
 class Coin(GameItem):
@@ -149,7 +169,8 @@ class Coin(GameItem):
     def __init__(self, x, y, folder, screen_size, price, ignore_scroll=False):
         images = [f"{folder}/{image}" for image in os.listdir(folder)
                   for _ in range(3)]
-        super().__init__(x, y, images, screen_size, create_static=False)
+        super().__init__(x, y, images, screen_size, "assets/sounds/coin.wav",
+                         volume=0.3, create_static=False)
         self.price = price
         self.ignore_scroll = ignore_scroll
         self.is_magnetized = False
@@ -159,6 +180,7 @@ class Coin(GameItem):
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
+            self.sound.play()
             self.activated = True
             player.add_money(self.price)
             self.delete()
@@ -177,6 +199,7 @@ class Coin(GameItem):
         self.is_magnetized = True
         self.speed_x = int((self.x - pos_x) / self.speed_coefficient)
         self.speed_y = int((self.y - pos_y) / self.speed_coefficient)
+        self.speed_coefficient = max(self.speed_coefficient - 0.125, 1)
 
 
 class BronzeCoin(Coin):
@@ -210,7 +233,8 @@ class Shield(GameItem):
         images = ["assets/items/shield32.png"]
         images += [f"assets/items/shield/{image}" for image in os.listdir(
             "assets/items/shield") for _ in range(3)]
-        super().__init__(x, y, images, screen_size)
+        super().__init__(x, y, images, screen_size,
+                         "assets/sounds/shield.wav", volume=0.4)
         self.lifespan = upgrade if upgrade is not None else 240
         self.image = self.static_image
 
@@ -227,6 +251,11 @@ class Shield(GameItem):
             super().update()
             self.rect.center = player.rect.center
             self.lifespan -= 1
+            if self.sound_timer <= 0:
+                self.sound.play()
+                self.sound_timer = self.sound_length
+            else:
+                self.sound_timer -= 0.04
         if self.lifespan == 0 or self.y > self.screen_height:
             self.delete(player)
 
@@ -240,7 +269,8 @@ class Magnet(GameItem):
         images = ["assets/items/magnet32.png"]
         images += [f"assets/items/magnet/{image}" for image in os.listdir(
             "assets/items/magnet") for _ in range(2)]
-        super().__init__(x, y, images, screen_size)
+        super().__init__(x, y, images, screen_size,
+                         "assets/sounds/magnet.wav", volume=0.4)
         self.diameter = upgrade[0] if upgrade is not None else 150
         self.lifespan = upgrade[1] if upgrade is not None else 240
         self.image = self.static_image
@@ -260,6 +290,11 @@ class Magnet(GameItem):
             super().update()
             self.rect.center = player.rect.center
             self.coverage_area.center = player.rect.center
+            if self.sound_timer <= 0:
+                self.sound.play()
+                self.sound_timer = self.sound_length
+            else:
+                self.sound_timer -= 0.03
             self.lifespan -= 1
         if self.lifespan == 0 or self.y > self.screen_height:
             self.delete(player)

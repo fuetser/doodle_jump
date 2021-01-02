@@ -8,6 +8,8 @@ class Game():
     def __init__(self, width: int, height: int, fps=60):
         pygame.init()
         pygame.font.init()
+        pygame.mixer.pre_init(44100, -16, 2, 512)
+        pygame.mixer.set_num_channels(32)
         self.SCREEN_SIZE = (width, height)
         self.display = pygame.display.set_mode(self.SCREEN_SIZE)
         self.FPS = fps
@@ -29,12 +31,13 @@ class Game():
                 exit()
 
     def switch_scenes(self):
+        if self.main_menu.load_shop:
+            self.shop.show()
+            self.level.game_over = False
         if self.level.game_over:
             self.game_over_menu.set_score(self.level.get_score())
             self.game_over_menu.update_money(self.level.get_collected_money())
             self.game_over_menu.show()
-        if self.main_menu.load_shop:
-            self.shop.show()
         if self.game_over_menu.load_main_menu or self.shop.load_main_menu:
             self.shop.load_main_menu = False
             self.game_over_menu.revive_happened = False

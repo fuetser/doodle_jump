@@ -23,6 +23,10 @@ class MainCharacter(StaticGameObject):
         self.magnet = None
         self.magnet_rect = None
         self.damage = upgrade if upgrade is not None else 40
+        self.jump_sound = pygame.mixer.Sound("assets/sounds/jump.wav")
+        self.shoot_sound = pygame.mixer.Sound("assets/sounds/shoot.wav")
+        self.jump_sound.set_volume(0.45)
+        self.shoot_sound.set_volume(0.3)
         self.bullets = Group()
 
     def move_h(self, offset: int):
@@ -84,6 +88,7 @@ class MainCharacter(StaticGameObject):
                         (self.screen_width, self.screen_height))
         bullet.shoot(target_x, target_y)
         self.bullets.add(bullet)
+        self.shoot_sound.play()
 
     def calculate_bullets_collisions(self, coll: pygame.sprite.Sprite):
         """метод для обработки столкновений пуль с объектом"""
@@ -92,6 +97,7 @@ class MainCharacter(StaticGameObject):
 
     def jump(self):
         """метод для прыжка от платформы"""
+        self.jump_sound.play()
         self.set_momentum(-5)
 
     def update(self, enemy=None):

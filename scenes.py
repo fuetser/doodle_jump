@@ -45,6 +45,9 @@ class Level(GameScene):
         self.enemy_height = 0
         self.coin = GoldenCoin(500, 15, self.size, ignore_scroll=True)
 
+        self.lose_sound = pygame.mixer.Sound("assets/sounds/lose.wav")
+        self.lose_sound.set_volume(0.4)
+
     def spawn_platforms(self):
         """метод для генерации новых платформ в рандомных координатах"""
         for _ in range(self.platforms_amount - len(self.platforms)):
@@ -61,7 +64,7 @@ class Level(GameScene):
             spring = Spring(x + 10, y - 5, self.size)
             platform.add_item(spring)
             self.items.add(spring)
-        elif 0.4 < random.random() < 0.5:
+        elif 0.2 < random.random() < 0.3:
             hat = PropellerHat(x + 10, y - 15, self.size, self.hat_upgrade)
             platform.add_item(hat)
             self.items.add(hat)
@@ -69,12 +72,12 @@ class Level(GameScene):
             trampoline = Trampoline(x + 4, y - 15, self.size)
             platform.add_item(trampoline)
             self.items.add(trampoline)
-        elif 0.3 < random.random() < 0.4:
+        elif 0.35 < random.random() < 0.4:
             jetpack = Jetpack(x + 13, y - 45, self.size, self.jetpack_upgrade)
             platform.add_item(jetpack)
             self.items.add(jetpack)
         elif 0.4 < random.random() < 0.5:
-            coin = GoldenCoin(x + 10, y - 25, self.size)
+            coin = SilverCoin(x + 10, y - 25, self.size)
             platform.add_item(coin)
             self.items.add(coin)
         elif 0.5 < random.random() < 0.6:
@@ -104,6 +107,9 @@ class Level(GameScene):
 
         if self.main_character.collides(self.bottom_rect) or self.main_character.game_over:
             self.game_over = True
+            self.lose_sound.play()
+            self.items.clear()
+            self.mute_sounds()
             self.close()
 
     def redraw(self, win):
@@ -187,18 +193,21 @@ class Level(GameScene):
         self.load_upgrades_levels()
         with open("upgrades.json", "r", encoding="u8") as f:
             data = json.load(f)
-        self.magnet_upgrade = data.get(self.MAGNET_KEY).get(self.magnet_level)
-        self.shield_upgrade = data.get(self.SHIELD_KEY).get(self.shield_level)
-        self.hat_upgrade = data.get(self.HAT_KEY).get(self.hat_level)
-        self.jetpack_upgrade = data.get(self.JETPACK_KEY).get(self.jetpack_level)
-        self.damage_upgrade = data.get(self.DAMAGE_KEY).get(self.damage_level)
+        self.magnet_upgrade = data.get(self.MAGNET_KEY).get(
+            str(self.magnet_level))
+        self.shield_upgrade = data.get(self.SHIELD_KEY).get(
+            str(self.shield_level))
+        self.hat_upgrade = data.get(self.HAT_KEY).get(str(self.hat_level))
+        self.jetpack_upgrade = data.get(self.JETPACK_KEY).get(
+            str(self.jetpack_level))
+        self.damage_upgrade = data.get(self.DAMAGE_KEY).get(
+            str(self.damage_level))
 
-    def load_upgrades_levels(self):
-        self.magnet_level = str(self.get_game_value(self.MAGNET_KEY))
-        self.shield_level = str(self.get_game_value(self.SHIELD_KEY))
-        self.hat_level = str(self.get_game_value(self.HAT_KEY))
-        self.jetpack_level = str(self.get_game_value(self.JETPACK_KEY))
-        self.damage_level = str(self.get_game_value(self.DAMAGE_KEY))
+    def mute_sounds(self):
+        """метод для отсановки всех звуков"""
+        for sprite in self.items:
+            if hasattr(sprite, "sound"):
+                sprite.sound.stop()
 
     def render_score(self):
         """Метод для рендера игрового счета"""
@@ -258,6 +267,8 @@ class MainMenu(GameScene):
                                             self.size, convert_alpha=True)
         self.load_level = False
         self.load_shop = False
+        self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
+        self.click_sound.set_volume(0.4)
 
     def redraw(self, win):
         win.blit(self.background, (0, 0))
@@ -273,9 +284,11 @@ class MainMenu(GameScene):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.play_button.collidepoint(event.pos):
                     self.load_level = True
+                    self.click_sound.play()
                     self.close()
                 if self.shop_button.collidepoint(event.pos):
                     self.load_shop = True
+                    self.click_sound.play()
                     self.close()
 
     def show(self):
@@ -301,6 +314,8 @@ class GameOverMenu(GameScene):
         self.continue_button = StaticGameObject(200, 475,
                                                 "assets/ui/continue_button.png",
                                                 self.size, convert_alpha=True)
+        self.click_sound = pygame.mixer.Sound("assets/sounds/click.wav")
+        self.click_sound.set_volume(0.6)
         self.restart_game = False
         self.load_main_menu = False
         self.revive_game = False
@@ -333,13 +348,16 @@ class GameOverMenu(GameScene):
                 if self.restart_button.collidepoint(event.pos):
                     self.restart_game = True
                     self.revive_happened = False
+                    self.click_sound.play()
                     self.close()
                 if self.menu_button.collidepoint(event.pos):
                     self.load_main_menu = True
+                    self.click_sound.play()
                     self.close()
                 if self.draw_revive and self.continue_button.collidepoint(event.pos):
                     self.revive_game = True
                     self.update_money(-self.revive_price)
+                    self.click_sound.play()
                     self.close()
 
     def set_score(self, score: int):
@@ -400,21 +418,27 @@ class ShopMenu(GameScene):
 
     def __init__(self, display: pygame.Surface, fps=60):
         super(ShopMenu, self).__init__(display, fps)
+        self.load_upgrades_levels()
         self.font = pygame.font.SysFont("cambriacambriamath", 32)
         self.menu_button = StaticGameObject(50, 525,
                                             "assets/ui/menu_button.png",
                                             self.size, convert_alpha=True)
         self.magnet_item = ShopItem(50, 25, self.size, "Magnet",
-                                    level=self.get_game_value(self.MAGNET_KEY))
+                                    level=self.magnet_level)
         self.shield_item = ShopItem(50, 150, self.size, "Shield",
-                                    level=self.get_game_value(self.SHIELD_KEY))
+                                    level=self.shield_level)
         self.hat_item = ShopItem(50, 275, self.size, "Hat",
-                                 level=self.get_game_value(self.HAT_KEY))
+                                 level=self.hat_level)
         self.jetpack_item = ShopItem(50, 400, self.size, "Jetpack",
-                                     level=self.get_game_value(self.JETPACK_KEY))
+                                     level=self.jetpack_level)
         self.damage_item = ShopItem(300, 25, self.size, "Damage",
-                                    level=self.get_game_value(self.DAMAGE_KEY))
+                                    level=self.damage_level)
         self.load_main_menu = False
+        self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
+        self.upgrade_sound = pygame.mixer.Sound(
+            "assets/sounds/upgrade_unlock.wav")
+        self.click_sound.set_volume(0.4)
+        self.upgrade_sound.set_volume(0.4)
 
     def redraw(self, win):
         win.fill((255, 255, 255))
@@ -437,6 +461,7 @@ class ShopMenu(GameScene):
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.menu_button.collidepoint(event.pos):
                     self.load_main_menu = True
+                    self.click_sound.play()
                     self.close()
                 if self.magnet_item.clicked(event.pos):
                     self.purchase_upgrade(
@@ -457,10 +482,11 @@ class ShopMenu(GameScene):
     def purchase_upgrade(self, key, item):
         """метод для покупки улучшения"""
         if (money := self.get_game_value(self.MONEY_KEY)) != -1:
-            if money >= item.price:
+            if money >= item.price and item.level < 5:
                 self.set_game_value(self.MONEY_KEY, money - item.price)
                 item.add_level()
                 self.set_game_value(key, item.level)
+                self.upgrade_sound.play()
 
     def show(self):
         self.load_main_menu = False

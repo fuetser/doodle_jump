@@ -1,5 +1,6 @@
 from core import AnimatedGameObject
 import os
+import pygame
 
 
 class Enemy(AnimatedGameObject):
@@ -37,3 +38,16 @@ class FlyingEye(Enemy):
         images = [f"assets/enemies/eye/{image}" for image in os.listdir(
             "assets/enemies/eye")]
         super().__init__(x, y, images, screen_size)
+        self.sound = pygame.mixer.Sound("assets/sounds/monster_sound.wav")
+        self.sound.set_volume(0.4)
+        self.sound.play()
+        self.sound_length = self.sound.get_length()
+        self.sound_timer = self.sound_length
+
+    def update(self, scroll: int):
+        super().update(scroll)
+        if self.sound_timer <= 0:
+            self.sound.play()
+            self.sound_timer = self.sound_length
+        else:
+            self.sound_timer -= 0.025

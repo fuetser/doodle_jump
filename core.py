@@ -174,6 +174,25 @@ class GameScene():
         finally:
             return result
 
+    def load_upgrades_levels(self):
+        """метод для получения уровней предметов"""
+        try:
+            with open("values.json", "r", encoding="u8") as f:
+                data = json.load(f)
+        except Exception as err:
+            print(err)
+            self.magnet_level = 0
+            self.shield_level = 0
+            self.hat_level = 0
+            self.jetpack_level = 0
+            self.damage_level = 0
+        else:
+            self.magnet_level = data.get(self.MAGNET_KEY)
+            self.shield_level = data.get(self.SHIELD_KEY)
+            self.hat_level = data.get(self.HAT_KEY)
+            self.jetpack_level = data.get(self.JETPACK_KEY)
+            self.damage_level = data.get(self.DAMAGE_KEY)
+
 
 class Group():
     """Кастомный класс для организации спрайтов"""
