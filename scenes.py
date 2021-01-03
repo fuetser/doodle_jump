@@ -3,7 +3,7 @@ from enemies import FlyingEye
 from items import *
 import json
 from main_character import MainCharacter
-from platforms import Platform
+from platforms import *
 import pygame
 import random
 
@@ -46,6 +46,40 @@ class Level(GameScene):
 
         self.lose_sound = pygame.mixer.Sound("assets/sounds/lose.wav")
         self.lose_sound.set_volume(0.4)
+
+        self.min_width = 100
+        self.min_height = 50
+        self.chunck_height = self.size[1]
+
+    def spawn_chuck(self, start_y=0):
+        """метод для спавна игрового чанка"""
+        totalh = random.randrange(-50, 100)
+        while totalh < self.size[1]:
+            totalw = random.randrange(-50, 100)
+            height = random.randrange(self.min_height, self.min_height * 2)
+            while totalw < self.size[0]:
+                width = random.randrange(self.min_width, self.min_width * 2)
+                y_offset = random.randrange(-self.min_height, self.min_height)
+                if random.choice((True, True, True, False)):
+                    platform = Platform(totalw, totalh + start_y + y_offset,
+                                        "assets/platforms/platform72.png",
+                                        self.size)
+                    self.platforms.add(platform)
+                    if int(random.random() * 100) % 3 == 0:
+                        self.spawn_objects(
+                            platform, totalw, totalh + start_y + y_offset)
+                totalw += width
+            totalh += height
+        self.min_width += 1
+        self.min_height += 1
+
+    def generate_chuncks(self):
+        """метод для генерации чанков в процессе прохождения вверх"""
+        self.chunck_height += self.offset
+        if self.chunck_height >= self.size[1]:
+            self.spawn_chuck(-self.size[1])
+            self.chunck_height = 0
+        self.spawn_enemies()
 
     def spawn_platforms(self):
         """метод для генерации новых платформ в рандомных координатах"""
@@ -138,8 +172,9 @@ class Level(GameScene):
 
     def handle_events(self):
         """метод для обработки событий сцены"""
-        self.spawn_platforms()
+        # self.spawn_platforms()
         # остановка сдвига вниз, когда игрок начинает падать вниз
+        self.generate_chuncks()
         if self.main_character.v_momentum > 0:
             self.scroll_down = False
         for event in pygame.event.get():
@@ -237,6 +272,9 @@ class Level(GameScene):
         self.score = 0
         self.bg_pos = -self.background.get_height() + self.size[1]
         self.offset = 5
+        self.min_width = 100
+        self.min_height = 50
+        self.chunck_height = self.size[1]
         self.scroll_down = False
         self.move_right = False
         self.move_left = False
@@ -251,10 +289,12 @@ class Level(GameScene):
         self.main_character.set_pos((250, 150))
         self.move_left = False
         self.move_right = False
-        self.show()
+        self.show(spawn_chuck=False)
 
-    def show(self):
+    def show(self, spawn_chuck=True):
         self.load_upgrades()
+        if spawn_chuck:
+            self.spawn_chuck()
         super().show()
 
 
@@ -309,15 +349,20 @@ class GameOverMenu(GameScene):
         self.score = 0
         self.highscore = 0
         self.font = pygame.font.SysFont("cambriacambriamath", 40)
+        self.sub_font = pygame.font.SysFont("cambriacambriamath", 30)
         self.restart_button = StaticGameObject(220, 230,
                                                "assets/ui/restart_button.png",
                                                self.size, convert_alpha=True)
         self.menu_button = StaticGameObject(220, 300,
                                             "assets/ui/menu_button.png",
                                             self.size, convert_alpha=True)
-        self.continue_button = StaticGameObject(200, 475,
+        self.continue_button = StaticGameObject(210, 480,
                                                 "assets/ui/continue_button.png",
                                                 self.size, convert_alpha=True)
+        self.background = pygame.image.load(
+            "assets/ui/game_over_bg.jpg").convert()
+        self.revive_dialog = pygame.image.load(
+            "assets/ui/revive_dialog.png").convert_alpha()
         self.click_sound = pygame.mixer.Sound("assets/sounds/click.wav")
         self.click_sound.set_volume(0.6)
         self.revive_price = 250
@@ -326,8 +371,7 @@ class GameOverMenu(GameScene):
         self.draw_revive = False
 
     def redraw(self, win):
-        pygame.draw.rect(win, "grey",
-                         (50, 50, self.size[0] - 100, self.size[1] - 100))
+        win.blit(self.background, (50, 50))
         highscore = self.font.render(
             f"Highscore: {self.highscore}", True, "black")
         current_score = self.font.render(f"Score: {self.score}", True, "black")
@@ -389,15 +433,15 @@ class GameOverMenu(GameScene):
     def draw_revive_dialog(self, win: pygame.Surface):
         """метод для отрисовки диалога возрождения"""
         if self.revive_countdown > 0:
-            pygame.draw.rect(win, (100, 100, 100),
-                             (50, 400, self.size[0] - 100, 150))
-            title = self.font.render(
-                "Do you want to continue?", True, (0, 0, 0))
-            time_remains = self.font.render(
-                str(self.revive_countdown // self.FPS + 1), True, (0, 0, 0))
+            win.blit(self.revive_dialog, (50, 375))
+            cost_text = self.sub_font.render(
+                f"It costs {self.revive_price}$", True, (0, 0, 0))
+            time_remains = self.font.render(str(
+                self.revive_countdown // self.FPS + 1), True, (0, 0, 0))
+            win.blit(cost_text, (
+                (self.revive_dialog.get_width() - cost_text.get_width()) // 2 + 50, 437))
             win.blit(self.continue_button.image, self.continue_button.rect)
-            win.blit(title, ((self.size[0] - title.get_width()) // 2, 410))
-            win.blit(time_remains, (360, 475))
+            win.blit(time_remains, (370, 480))
             self.revive_countdown -= 1
         else:
             self.draw_revive = False
@@ -437,19 +481,20 @@ class ShopMenu(GameScene):
         self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
         self.upgrade_sound = pygame.mixer.Sound(
             "assets/sounds/upgrade_unlock.wav")
+        self.background = pygame.image.load("assets/ui/shop_bg.jpg").convert()
         self.click_sound.set_volume(0.4)
         self.upgrade_sound.set_volume(0.4)
 
     def redraw(self, win):
-        win.fill((255, 255, 255))
+        win.blit(self.background, (0, 0))
         win.blit(self.menu_button.image, self.menu_button.rect)
         self.magnet_item.draw(win)
         self.shield_item.draw(win)
         self.hat_item.draw(win)
         self.jetpack_item.draw(win)
         self.damage_item.draw(win)
-        money = self.font.render(
-            f"{self.get_game_value(self.MONEY_KEY)}$", True, (0, 0, 0))
+        money = self.font.render(f"{self.get_game_value(self.MONEY_KEY)}$",
+                                 True, (0, 0, 0))
         win.blit(money, (self.size[0] - money.get_width() - 25, 540))
 
     def handle_events(self):
@@ -513,7 +558,7 @@ class ShopItem(StaticGameObject):
                                             "assets/ui/plus_button.png",
                                             screen_size, convert_alpha=True)
         self.plus_button.set_pos((self.rect.right - self.plus_button.rect.w,
-                                  y + self.title.get_height() + 10))
+                                  y + self.title.get_height() + 11))
         self.colors = (
             (253, 245, 66),
             (251, 216, 8),

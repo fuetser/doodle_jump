@@ -75,12 +75,14 @@ class GameObject(pygame.sprite.Sprite):
 class StaticGameObject(GameObject):
     """Абстрактный класс для создания статичных игровых объектов"""
 
-    def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
+    def __init__(self, x, y, image_path, screen_size, convert_alpha=True,
+                 load_image=True):
         super().__init__(screen_size)
-        if convert_alpha:
-            self.image = pygame.image.load(image_path).convert_alpha()
-        else:
-            self.image = pygame.image.load(image_path).convert()
+        if load_image:
+            if convert_alpha:
+                self.image = pygame.image.load(image_path).convert_alpha()
+            else:
+                self.image = pygame.image.load(image_path).convert()
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
 

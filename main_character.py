@@ -114,7 +114,6 @@ class MainCharacter(StaticGameObject):
                                  momentum=random.randrange(0, 3))
 
     def update(self, enemy=None):
-        print(len(self.particles))
         self.move_v()
         self.bullets.update()
         self.particles.update()
@@ -202,12 +201,23 @@ class MainCharacter(StaticGameObject):
 
 class Bullet(StaticGameObject):
     """Класс для создания пули"""
+    image = None
 
     def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
-        super().__init__(x, y, image_path, screen_size, convert_alpha)
+        self.__class__.load_image(image_path, convert_alpha)
+        super().__init__(
+            x, y, image_path, screen_size, convert_alpha, load_image=False)
         self.speed_x = 0
         self.speed_y = 0
         self.speed_coefficient = 10
+
+    @classmethod
+    def load_image(cls, image_path, convert_alpha):
+        if cls.image is None:
+            if convert_alpha:
+                cls.image = pygame.image.load(image_path).convert_alpha()
+            else:
+                cls.image = pygame.image.load(image_path).convert()
 
     def shoot(self, target_x: int, target_y: int):
         """метод для старта полета пули в определенном направлении"""

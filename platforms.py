@@ -4,10 +4,21 @@ import pygame
 
 class Platform(StaticGameObject):
     """Абстрактный класс для создания платформ"""
+    image = None
 
     def __init__(self, x, y, image_path, screen_size, convert_alpha=True):
-        super().__init__(x, y, image_path, screen_size, convert_alpha)
+        self.__class__.load_image(image_path, convert_alpha)
+        super().__init__(
+            x, y, image_path, screen_size, convert_alpha, load_image=False)
         self.item = None
+
+    @classmethod
+    def load_image(cls, image_path, convert_alpha):
+        if cls.image is None:
+            if convert_alpha:
+                cls.image = pygame.image.load(image_path).convert_alpha()
+            else:
+                cls.image = pygame.image.load(image_path).convert()
 
     def update(self, scroll: int):
         """метод для обновления спрайта"""
