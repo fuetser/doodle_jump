@@ -18,9 +18,9 @@ class Level(GameScene):
         self.background = pygame.image.load(
             "assets/ui/cycled_bg.jpg").convert()
         self.bg_height = self.background.get_height()
-        self.main_character = MainCharacter(200, 100,
-                                            "assets/base_character72.png",
-                                            self.size, self.damage_upgrade)
+        self.main_character = MainCharacter(
+            200, 100, "assets/base_character72.png", self.size,
+            self.damage_upgrade, self.reload_upgrade)
         # прямоугольник для проверки упал игрок вниз или нет
         self.bottom_rect = pygame.Rect(
             -100, self.size[0] - 2, self.size[1] + 200, 2)
@@ -32,8 +32,6 @@ class Level(GameScene):
         self.move_right = False
         self.move_left = False
         self.parallax_coefficient = 0.1
-        # количество платформ в сцене
-        self.platforms_amount = 10
         # группы объектов на экране
         self.platforms = Group()
         self.items = Group()
@@ -60,14 +58,7 @@ class Level(GameScene):
             while totalw < self.size[0]:
                 width = random.randrange(self.min_width, self.min_width * 2)
                 y_offset = random.randrange(-self.min_height, self.min_height)
-                if random.choice((True, True, True, False)):
-                    platform = Platform(totalw, totalh + start_y + y_offset,
-                                        "assets/platforms/platform72.png",
-                                        self.size)
-                    self.platforms.add(platform)
-                    if int(random.random() * 100) % 3 == 0:
-                        self.spawn_objects(
-                            platform, totalw, totalh + start_y + y_offset)
+                self.spawn_platform(totalw, totalh + start_y + y_offset)
                 totalw += width
             totalh += height
         self.min_width += 1
@@ -81,54 +72,44 @@ class Level(GameScene):
             self.chunck_height = 0
         self.spawn_enemies()
 
-    def spawn_platforms(self):
-        """метод для генерации новых платформ в рандомных координатах"""
-        for _ in range(self.platforms_amount - len(self.platforms)):
-            x = random.randint(0, self.size[0] - 100)
-            y = random.randint(0, self.size[1] - 100)
+    def spawn_platform(self, x: int, y: int):
+        """метод для генерации платформы"""
+        if random.choice((True, True, True, False)) and 0 <= x < self.size[0] - 65:
             platform = Platform(
                 x, y, "assets/platforms/platform72.png", self.size)
             self.platforms.add(platform)
-            self.spawn_objects(platform, x, y)
-            self.spawn_enemies()
+            if random.random() > 0.8:
+                self.spawn_objects(platform, x, y)
 
     def spawn_objects(self, platform: Platform, x: int, y: int):
+        item = None
         if 0.1 < random.random() < 0.2:
-            spring = Spring(x + 10, y - 5, self.size)
-            platform.add_item(spring)
-            self.items.add(spring)
+            item = Spring(x + 10, y - 5, self.size)
         elif 0.2 < random.random() < 0.3:
-            hat = PropellerHat(x + 10, y - 30, self.size, self.hat_upgrade)
-            platform.add_item(hat)
-            self.items.add(hat)
+            item = PropellerHat(x + 10, y - 30, self.size, self.hat_upgrade)
         elif 0.2 < random.random() < 0.3:
-            trampoline = Trampoline(x + 4, y - 15, self.size)
-            platform.add_item(trampoline)
-            self.items.add(trampoline)
+            item = Trampoline(x, y - 15, self.size)
         elif 0.3 < random.random() < 0.4:
-            jetpack = Jetpack(x + 13, y - 45, self.size, self.jetpack_upgrade)
-            platform.add_item(jetpack)
-            self.items.add(jetpack)
+            item = Jetpack(x + 13, y - 45, self.size, self.jetpack_upgrade)
         elif 0.4 < random.random() < 0.5:
-            coin = BronzeCoin(x + 10, y - 25, self.size)
-            platform.add_item(coin)
-            self.items.add(coin)
+            item = BronzeCoin(x + 10, y - 25, self.size)
         elif 0.7 < random.random() < 0.8:
-            coin = SilverCoin(x + 10, y - 25, self.size)
-            platform.add_item(coin)
-            self.items.add(coin)
+            item = SilverCoin(x + 10, y - 25, self.size)
         elif 0.8 < random.random() < 0.9:
-            coin = GoldenCoin(x + 10, y - 25, self.size)
-            platform.add_item(coin)
-            self.items.add(coin)
+            item = GoldenCoin(x + 10, y - 25, self.size)
         elif 0.5 < random.random() < 0.6:
-            magnet = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
-            platform.add_item(magnet)
-            self.items.add(magnet)
+            item = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
         elif 0.6 < random.random() < 0.7:
-            shield = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
-            platform.add_item(shield)
-            self.items.add(shield)
+            item = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
+        elif 0.7 < random.random() < 0.8:
+            item = Hole(x, y, self.size)
+        if item is not None:
+            platform.add_item(item)
+            self.items.add(item)
+
+    def spawn_coins(self):
+        """метод для спавна монеток"""
+        pass
 
     def spawn_enemies(self):
         """метод для спавна врагов"""
@@ -147,11 +128,7 @@ class Level(GameScene):
             self.main_character.process_magnet_collisions(group)
 
         if self.main_character.collides(self.bottom_rect) or self.main_character.game_over:
-            self.manager.load_scene(2)
-            self.lose_sound.play()
-            self.items.clear()
-            self.mute_sounds()
-            self.close()
+            self.game_over()
 
     def redraw(self, win):
         """метод для отрисовки сцены"""
@@ -244,12 +221,22 @@ class Level(GameScene):
             str(self.jetpack_level))
         self.damage_upgrade = data.get(self.DAMAGE_KEY).get(
             str(self.damage_level))
+        self.reload_upgrade = data.get(self.RELOAD_KEY).get(
+            str(self.reload_level))
+
+    def game_over(self):
+        """метод для завершения уровня"""
+        self.manager.load_scene(2)
+        self.lose_sound.play()
+        self.mute_sounds()
+        self.close()
 
     def mute_sounds(self):
         """метод для отсановки всех звуков"""
         for sprite in self.items:
             if hasattr(sprite, "sound"):
                 sprite.sound.stop()
+        self.main_character.mute()
 
     def render_score(self):
         """Метод для рендера игрового счета"""
@@ -286,6 +273,7 @@ class Level(GameScene):
 
     def revive_game(self):
         """метод для продолжения игры после проигрыша"""
+        self.enemies.clear()
         self.main_character.set_pos((250, 150))
         self.move_left = False
         self.move_right = False
@@ -293,6 +281,8 @@ class Level(GameScene):
 
     def show(self, spawn_chuck=True):
         self.load_upgrades()
+        self.main_character.load_upgrades(
+            self.damage_upgrade, self.reload_upgrade)
         if spawn_chuck:
             self.spawn_chuck()
         super().show()
@@ -350,10 +340,10 @@ class GameOverMenu(GameScene):
         self.highscore = 0
         self.font = pygame.font.SysFont("cambriacambriamath", 40)
         self.sub_font = pygame.font.SysFont("cambriacambriamath", 30)
-        self.restart_button = StaticGameObject(220, 230,
+        self.restart_button = StaticGameObject(228, 230,
                                                "assets/ui/restart_button.png",
                                                self.size, convert_alpha=True)
-        self.menu_button = StaticGameObject(220, 300,
+        self.menu_button = StaticGameObject(228, 300,
                                             "assets/ui/menu_button.png",
                                             self.size, convert_alpha=True)
         self.continue_button = StaticGameObject(210, 480,
@@ -369,15 +359,19 @@ class GameOverMenu(GameScene):
         self.revive_countdown = 5 * self.FPS
         self.revive_happened = False
         self.draw_revive = False
+        self.money_collected = 0
 
     def redraw(self, win):
         win.blit(self.background, (50, 50))
         highscore = self.font.render(
             f"Highscore: {self.highscore}", True, "black")
         current_score = self.font.render(f"Score: {self.score}", True, "black")
-        win.blit(highscore, ((self.size[0] - highscore.get_width()) // 2, 75))
+        money = self.font.render(f"Money collected: {self.money_collected}",
+                                 True, "black")
+        win.blit(highscore, ((self.size[0] - highscore.get_width()) // 2, 65))
         win.blit(current_score,
-                 ((self.size[0] - current_score.get_width()) // 2, 150))
+                 ((self.size[0] - current_score.get_width()) // 2, 115))
+        win.blit(money, ((self.size[0] - money.get_width()) // 2, 165))
         win.blit(self.restart_button.image, self.restart_button.rect)
         win.blit(self.menu_button.image, self.menu_button.rect)
         if self.draw_revive:
@@ -423,6 +417,7 @@ class GameOverMenu(GameScene):
     def update_money(self, money_to_add):
         if (money := self.get_game_value(self.MONEY_KEY)) != -1:
             self.set_game_value(self.MONEY_KEY, money + money_to_add)
+            self.money_collected = money_to_add
 
     def show_revive_dialog(self):
         """метод для показа диалога возрождения"""
@@ -478,6 +473,8 @@ class ShopMenu(GameScene):
                                      level=self.jetpack_level)
         self.damage_item = ShopItem(300, 25, self.size, "Damage",
                                     level=self.damage_level)
+        self.reload_item = ShopItem(300, 150, self.size, "Reload",
+                                    level=self.reload_level)
         self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
         self.upgrade_sound = pygame.mixer.Sound(
             "assets/sounds/upgrade_unlock.wav")
@@ -493,6 +490,7 @@ class ShopMenu(GameScene):
         self.hat_item.draw(win)
         self.jetpack_item.draw(win)
         self.damage_item.draw(win)
+        self.reload_item.draw(win)
         money = self.font.render(f"{self.get_game_value(self.MONEY_KEY)}$",
                                  True, (0, 0, 0))
         win.blit(money, (self.size[0] - money.get_width() - 25, 540))
@@ -523,6 +521,9 @@ class ShopMenu(GameScene):
                 if self.damage_item.clicked(event.pos):
                     self.purchase_upgrade(
                         key=self.DAMAGE_KEY, item=self.damage_item)
+                if self.reload_item.clicked(event.pos):
+                    self.purchase_upgrade(
+                        key=self.RELOAD_KEY, item=self.reload_item)
 
     def purchase_upgrade(self, key, item):
         """метод для покупки улучшения"""

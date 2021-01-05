@@ -29,6 +29,8 @@ class Game():
         self.revive_level = False
         self.load_shop = False
 
+        self.level_music_playing = True
+
     def switch_scenes(self):
         """метод для переключения сцен в зависимости от флагов"""
         if self.load_main_menu:
@@ -44,6 +46,20 @@ class Game():
             self.game_over_menu.show()
         elif self.load_shop:
             self.shop.show()
+
+    def play_music(self):
+        """метод для воспроизведения фоновой музыки в зависимости от сцены"""
+        if self.load_level or self.revive_level or self.load_game_over_menu:
+            if not self.level_music_playing:
+                pygame.mixer.music.load("assets/music/level_music.mp3")
+                pygame.mixer.music.set_volume(0.25)
+                pygame.mixer.music.play(-1)
+                self.level_music_playing = True
+        elif self.level_music_playing:
+            pygame.mixer.music.load("assets/music/menu_music.ogg")
+            pygame.mixer.music.set_volume(0.2)
+            pygame.mixer.music.play(-1)
+            self.level_music_playing = False
 
     def load_scene(self, index):
         """метод для загрузки сцены"""
@@ -69,6 +85,7 @@ class Game():
 
     def run(self):
         while True:
+            self.play_music()
             self.switch_scenes()
 
 

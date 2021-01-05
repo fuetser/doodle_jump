@@ -92,9 +92,11 @@ class AnimatedGameObject(GameObject):
     images = None
     static_image = None
 
-    def __init__(self, x, y, images, screen_size, convert_alpha=True):
+    def __init__(self, x, y, images, screen_size, convert_alpha=True,
+                 create_static=True, colorkey=None):
         super().__init__(screen_size)
-        self.__class__.load_images(images)
+        self.__class__.load_images(
+            images, convert_alpha, create_static, colorkey)
         self.image = self.images[0]
         self.rect = self.image.get_rect()
         self.rect.topleft = (x, y)
@@ -102,7 +104,7 @@ class AnimatedGameObject(GameObject):
         self.frames_amount = len(self.images)
 
     @classmethod
-    def load_images(cls, images, convert_alpha=True, create_static=True):
+    def load_images(cls, images, convert_alpha=True, create_static=True, colorkey=None):
         """метод для загрузки анимации спрайта"""
         if cls.images is None:
             if convert_alpha:
@@ -111,8 +113,19 @@ class AnimatedGameObject(GameObject):
             else:
                 cls.images = [pygame.image.load(
                     image).convert() for image in images]
+            cls.set_colorkey(colorkey)
             if create_static and cls.static_image is None:
                 cls.static_image = cls.images.pop(0)
+
+    @classmethod
+    def set_colorkey(cls, colorkey):
+        if colorkey is not None:
+            if colorkey == -1:
+                for image in cls.images:
+                    image.set_colorkey(image.get_at((5, 5)))
+            else:
+                for image in cls.images:
+                    image.set_colorkey(colorkey)
 
     def update(self, skip_frames=1):
         position = self.pos
@@ -142,6 +155,7 @@ class GameScene():
         self.HAT_KEY = "hat"
         self.JETPACK_KEY = "jetpack"
         self.DAMAGE_KEY = "damage"
+        self.RELOAD_KEY = "reload"
 
     def redraw(self, win: pygame.Surface):
         """метод для отрисовки на заданной поверхности"""
@@ -201,12 +215,14 @@ class GameScene():
             self.hat_level = 0
             self.jetpack_level = 0
             self.damage_level = 0
+            self.reload_level = 0
         else:
             self.magnet_level = data.get(self.MAGNET_KEY)
             self.shield_level = data.get(self.SHIELD_KEY)
             self.hat_level = data.get(self.HAT_KEY)
             self.jetpack_level = data.get(self.JETPACK_KEY)
             self.damage_level = data.get(self.DAMAGE_KEY)
+            self.reload_level = data.get(self.RELOAD_KEY)
 
 
 class Group():
