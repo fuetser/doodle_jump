@@ -156,6 +156,7 @@ class GameScene():
         self.JETPACK_KEY = "jetpack"
         self.DAMAGE_KEY = "damage"
         self.RELOAD_KEY = "reload"
+        self.JUMP_KEY = "jump"
 
     def redraw(self, win: pygame.Surface):
         """метод для отрисовки на заданной поверхности"""
@@ -216,6 +217,7 @@ class GameScene():
             self.jetpack_level = 0
             self.damage_level = 0
             self.reload_level = 0
+            self.jump_level = 0
         else:
             self.magnet_level = data.get(self.MAGNET_KEY)
             self.shield_level = data.get(self.SHIELD_KEY)
@@ -223,6 +225,7 @@ class GameScene():
             self.jetpack_level = data.get(self.JETPACK_KEY)
             self.damage_level = data.get(self.DAMAGE_KEY)
             self.reload_level = data.get(self.RELOAD_KEY)
+            self.jump_level = data.get(self.JUMP_KEY)
 
 
 class Group():

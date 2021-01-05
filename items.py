@@ -143,6 +143,7 @@ class Trampoline(GameItem):
         self.sound.play()
         player.set_momentum(-15)
         player.spawn_particles()
+        player.rotate()
 
 
 class Jetpack(FlyingGameItem):
@@ -261,6 +262,16 @@ class GoldenCoin(Coin):
         self.colors = ((255, 215, 0), (229, 146, 2), (255, 247, 122))
 
 
+class HoloCoin(Coin):
+    """Класс для создания голографических монеток"""
+
+    def __init__(self, x, y, screen_size, price=50, ignore_scroll=False):
+        super().__init__(x, y, "assets/items/holo_coin", screen_size,
+                         price=price, ignore_scroll=ignore_scroll)
+        self.colors = ((107, 210, 255), (172, 180, 252), (253, 207, 191),
+                       (253, 107, 182), (228, 98, 248), (139, 124, 241))
+
+
 class Shield(GameItem):
     """Класс для создания щита"""
 
@@ -285,7 +296,7 @@ class Shield(GameItem):
             self.scroll(args[0])
         else:
             super().update()
-            self.rect.center = player.rect.center
+            self.rect.center = player.item_pos
             self.lifespan -= 1
             self.play_sound(0.04)
         if self.lifespan == 0 or self.y > self.screen_height:
@@ -323,7 +334,7 @@ class Magnet(GameItem):
             self.scroll(args[0])
         else:
             super().update()
-            self.rect.center = player.rect.center
+            self.rect.center = player.item_pos
             self.coverage_area.center = player.rect.center
             self.play_sound(0.03)
             self.lifespan -= 1

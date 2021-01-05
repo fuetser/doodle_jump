@@ -9,7 +9,7 @@ class MainCharacter(StaticGameObject):
     """Класс для создания главного персонажа"""
 
     def __init__(self, x, y, image_path, screen_size, damage=None,
-                 reload_time=None, convert_alpha=True):
+                 reload_time=None, jump=None, convert_alpha=True):
         super().__init__(x, y, image_path, screen_size, convert_alpha)
         self.width = self.image.get_width()
         self.height = self.image.get_height()
@@ -26,6 +26,7 @@ class MainCharacter(StaticGameObject):
         self.magnet_rect = None
         self.damage = damage if damage is not None else 35
         self.reload_time = reload_time if reload_time is not None else 90
+        self.jum_height = jump if jump is not None else -4
         self.reload_timer = 0
         self.shoot_colors = (
             (187, 210, 102), (127, 163, 1), (70, 91, 0), (204, 221, 141))
@@ -35,6 +36,9 @@ class MainCharacter(StaticGameObject):
         self.shoot_sound.set_volume(0.3)
         self.bullets = Group()
         self.particles = Group()
+        self.is_rotating = False
+        self.current_rotation = 0
+        self.item_pos = self.rect.center
 
     def move_h(self, offset: int):
         """метод для перемещения персонажа по горизонтали
@@ -66,8 +70,6 @@ class MainCharacter(StaticGameObject):
                 self.game_over = True
             elif self.shield is None:
                 coll.delete()
-            else:
-                scroll = False
         elif self.bottom <= coll.top + 10 and not self.has_item:
             self.rect.bottom = coll.rect.top
             self.jump()
@@ -115,7 +117,7 @@ class MainCharacter(StaticGameObject):
     def jump(self):
         """метод для прыжка от платформы"""
         self.jump_sound.play()
-        self.set_momentum(-5)
+        self.set_momentum(self.jum_height)
         for _ in range(20):
             self.spawn_particles(amount=1, radius=random.randrange(4, 10),
                                  momentum=random.randrange(0, 3))
@@ -128,20 +130,25 @@ class MainCharacter(StaticGameObject):
             self.calculate_bullets_collisions(enemy)
         if self.reload_timer > 0:
             self.reload_timer -= 1
+        if self.is_rotating:
+            self.current_rotation += 15
+            if self.current_rotation > 360:
+                self.is_rotating = False
 
-    def load_upgrades(self, damage=None, reload_time=None):
+    def load_upgrades(self, damage=None, reload_time=None, jump=None):
         """метод для загрузки прокачки игрока при перезагрузке сцены"""
         self.damage = damage if damage is not None else 35
         self.reload_time = reload_time if reload_time is not None else 90
+        self.jum_height = jump if jump is not None else -4
 
     def spawn_particles(self, x=None, y=None, color="white", radius=8,
                         amount=10, direction=None, momentum=3, lifespan=120):
-        direction = random.choice((-1, 1)) if direction is None else direction
+        direct = random.choice((-1, 0, 1)) if direction is None else direction
         x = self.rect.center[0] if x is None else x
         y = self.bottom if y is None else y
         for _ in range(amount):
             self.particles.raw_add(Particle(x, y, radius, color,
-                                            direction=direction,
+                                            direction=direct,
                                             momentum=momentum,
                                             lifespan=lifespan))
 
@@ -156,7 +163,15 @@ class MainCharacter(StaticGameObject):
                                  momentum=res_momentum)
 
     def draw(self, win: pygame.Surface):
-        win.blit(self.image, self.rect)
+        if not self.is_rotating:
+            win.blit(self.image, self.rect)
+            self.item_pos = self.rect.center
+        else:
+            image = pygame.transform.rotate(self.image, self.current_rotation)
+            x = self.x - image.get_width() // 2
+            y = self.y - image.get_height() // 2
+            win.blit(image, (x, y))
+            self.item_pos = self.pos
         self.bullets.draw(win)
         self.particles.raw_draw(win)
 
@@ -164,6 +179,12 @@ class MainCharacter(StaticGameObject):
         """метод для отключения звуков игрока"""
         if self.flying_object is not None:
             self.flying_object.sound.stop()
+
+    def rotate(self):
+        """метод для запуска вращения игрока вокруг своей оси"""
+        if not self.is_rotating:
+            self.is_rotating = True
+            self.current_rotation = 0
 
     def add_momentum(self, amount: int):
         """метод для изменения ускорения игрока"""
@@ -214,6 +235,9 @@ class MainCharacter(StaticGameObject):
         self.shield = None
         self.magnet = None
         self.magent_rect = None
+        self.is_rotating = False
+        self.current_rotation = 0
+        self.item_pos = self.rect.center
         self.bullets.clear()
         self.particles.clear()
 
