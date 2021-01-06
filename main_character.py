@@ -1,4 +1,4 @@
-from core import StaticGameObject, Group, Particle
+from core import StaticGameObject, Group, Particle, GlowingParticle
 from enemies import Enemy
 from items import GameItem, Coin
 import pygame
@@ -63,21 +63,37 @@ class MainCharacter(StaticGameObject):
         """метод для обработки столкновений"""
         scroll = True
         if isinstance(coll, GameItem):
-            if coll.collect_with_item or not self.has_item:
-                coll.activate(self)
+            self.process_game_item(coll)
         elif isinstance(coll, Enemy):
-            if self.bottom > coll.top + 20 and self.shield is None:
-                self.game_over = True
-            elif self.shield is None:
-                coll.delete()
-        elif self.bottom <= coll.top + 10 and not self.has_item:
+            self.process_enemy(coll)
+        elif self.v_momentum > 0 and not self.has_item:
+            scroll = self.process_platform(coll)
+        return scroll
+
+    def process_game_item(self, coll: GameItem):
+        """метод для обработки коллтзий с игровыми предметами"""
+        if coll.collect_with_item or not (self.has_item or self.is_rotating):
+            coll.activate(self)
+
+    def process_enemy(self, coll: Enemy):
+        """метод для обработки коллизий с врагами"""
+        if self.bottom > coll.top + 20:
+            self.game_over = self.shield is None
+        elif self.v_momentum > 0:
+            coll.delete()
+
+    def process_platform(self, coll):
+        """метод для обработки коллизий с платформами"""
+        scroll = True
+        if self.bottom <= coll.top + 10:
             self.rect.bottom = coll.rect.top
             self.jump()
-        elif self.bottom - 10 > coll.top and self.v_momentum > 0 and not self.has_item:
+        else:
             scroll = False
         return scroll
 
     def process_magnet_collisions(self, group: Group):
+        """метод для обработки коллизий магнита с монетками"""
         if self.magnet_rect is not None and self.magnet is not None:
             for coll in group.get_rect_collisions(self.magnet_rect):
                 if isinstance(coll, Coin):
@@ -122,16 +138,16 @@ class MainCharacter(StaticGameObject):
             self.spawn_particles(amount=1, radius=random.randrange(4, 10),
                                  momentum=random.randrange(0, 3))
 
-    def update(self, enemy=None):
+    def update(self, enemy_group):
         self.move_v()
         self.bullets.update()
         self.particles.update()
-        if enemy is not None:
+        for enemy in enemy_group:
             self.calculate_bullets_collisions(enemy)
         if self.reload_timer > 0:
             self.reload_timer -= 1
         if self.is_rotating:
-            self.current_rotation += 15
+            self.current_rotation += 12
             if self.current_rotation > 360:
                 self.is_rotating = False
 
@@ -143,12 +159,13 @@ class MainCharacter(StaticGameObject):
 
     def spawn_particles(self, x=None, y=None, color="white", radius=8,
                         amount=10, direction=None, momentum=3, lifespan=120):
-        direct = random.choice((-1, 0, 1)) if direction is None else direction
         x = self.rect.center[0] if x is None else x
         y = self.bottom if y is None else y
         for _ in range(amount):
+            if direction is None:
+                direction = random.choice((-1, 0, 1))
             self.particles.raw_add(Particle(x, y, radius, color,
-                                            direction=direct,
+                                            direction=direction,
                                             momentum=momentum,
                                             lifespan=lifespan))
 
@@ -161,6 +178,16 @@ class MainCharacter(StaticGameObject):
             color = random.choice(colors)
             self.spawn_particles(x, y, color, amount=amount, radius=res_radius,
                                  momentum=res_momentum)
+
+    def spawn_glowing_particles(self, x, y, amount=10, direction=None,
+                                radius=8, momentum=3, lifespan=120):
+        """метод для спавна светящихся частиц"""
+        for _ in range(amount):
+            if direction is None:
+                direction = random.choice((-1, 0, 1))
+            particle = GlowingParticle(x, y, radius, direction=direction,
+                                       momentum=momentum, lifespan=lifespan)
+            self.particles.raw_add(particle)
 
     def draw(self, win: pygame.Surface):
         if not self.is_rotating:

@@ -6,9 +6,17 @@ import pygame
 
 class Enemy(AnimatedGameObject):
     """Абстрактный класс для противника"""
+    sound = None
+    damage_sound = None
+    death_sound = None
 
-    def __init__(self, x, y, images, screen_size, group, convert_alpha=True):
+    def __init__(self, x, y, images, screen_size, group, sound, volume,
+                 convert_alpha=True):
         super().__init__(x, y, images, screen_size, convert_alpha)
+        self.__class__.load_sound(sound, volume)
+        self.sound_length = self.sound.get_length()
+        self.sound_timer = 0
+        self.sound_reload = 0.02
         self.group = group
         self.horizontal_speed = 4
         self.hp = 100
@@ -23,6 +31,26 @@ class Enemy(AnimatedGameObject):
         # self.colors = ((103, 197, 10), (255, 217, 0), (124, 215, 194),
         #                (5, 78, 111), (20, 20, 20))
 
+    @classmethod
+    def load_sound(cls, sound, volume):
+        """метод для загрузки звука врага"""
+        if cls.sound is None:
+            cls.sound = pygame.mixer.Sound(sound)
+            cls.sound.set_volume(volume)
+            cls.load_base_sounds()
+
+    @classmethod
+    def load_base_sounds(cls):
+        """метод для загрузки звуков, общих для всех врагов"""
+        if cls.damage_sound is None:
+            cls.damage_sound = pygame.mixer.Sound(
+                "assets/sounds/enemy_damage.wav")
+            cls.damage_sound.set_volume(0.2)
+        if cls.death_sound is None:
+            cls.death_sound = pygame.mixer.Sound(
+                "assets/sounds/enemy_death.wav")
+            cls.death_sound.set_volume(0.3)
+
     def move_h(self):
         self.rect.x += self.horizontal_speed
         if self.x > self.screen_width or self.x < -self.rect.width:
@@ -33,6 +61,7 @@ class Enemy(AnimatedGameObject):
         super().update()
         self.move_h()
         self.scroll(scroll)
+        self.play_sound(self.sound_reload)
         if self.y > self.screen_height or self.hp <= 0:
             self.delete()
         if self.horizontal_speed < 0 != self.facing_right:
@@ -45,6 +74,7 @@ class Enemy(AnimatedGameObject):
     def take_damage(self, damage: int):
         """метод для нанесения урона"""
         self.hp -= damage
+        self.damage_sound.play()
 
     def play_sound(self, step: float):
         """метод для воспроизведения звука предмета"""
@@ -55,10 +85,12 @@ class Enemy(AnimatedGameObject):
             self.sound_timer -= step
 
     def delete(self, *args, **kwargs):
-        coin = HoloCoin(*self.rect.center,
-                        (self.screen_width, self.screen_width),
-                        price=self.reward)
-        self.group.add(coin)
+        if self.hp <= 0:
+            coin = HoloCoin(*self.rect.center,
+                            (self.screen_width, self.screen_width),
+                            price=self.reward)
+            self.group.add(coin)
+            self.death_sound.play()
         super().delete(*args, **kwargs)
 
     def rotate_image(self):
@@ -69,19 +101,12 @@ class FlyingEye(Enemy):
     def __init__(self, x, y, screen_size, group):
         images = [f"assets/enemies/eye/{image}" for image in os.listdir(
             "assets/enemies/eye")]
-        super().__init__(x, y, images, screen_size, group)
+        super().__init__(x, y, images, screen_size, group,
+                         "assets/sounds/monster_sound.wav", volume=0.4)
         self.hp = 200
         self.reward = 200
-        self.sound = pygame.mixer.Sound("assets/sounds/monster_sound.wav")
-        self.sound.set_volume(0.4)
-        self.sound.play()
-        self.sound_length = self.sound.get_length()
-        self.sound_timer = self.sound_length
         self.facing_right = False
-
-    def update(self, scroll: int):
-        super().update(scroll)
-        self.play_sound(0.025)
+        self.sound_reload = 0.025
 
 
 class Dragon(Enemy):
@@ -90,8 +115,9 @@ class Dragon(Enemy):
     def __init__(self, x, y, screen_size, group):
         images = [f"assets/enemies/dragon/{image}" for image in os.listdir(
             "assets/enemies/dragon") for _ in range(4)]
-        super().__init__(x, y, images, screen_size, group)
-        self.horizontal_speed = 8
+        super().__init__(x, y, images, screen_size, group,
+                         "assets/sounds/dragon.wav", volume=0.2)
+        self.horizontal_speed = 6
         self.reward = 300
         self.hp = 300
 
@@ -102,7 +128,8 @@ class Medusa(Enemy):
     def __init__(self, x, y, screen_size, group):
         images = [f"assets/enemies/medusa/{image}" for image in os.listdir(
             "assets/enemies/medusa") for _ in range(4)]
-        super().__init__(x, y, images, screen_size, group)
+        super().__init__(x, y, images, screen_size, group,
+                         "assets/sounds/medusa.wav", volume=0.2)
         self.horizontal_speed = 3
         self.blood_colors = ((103, 197, 10), (255, 217, 0), (124, 215, 194),
                              (5, 78, 111), (20, 20, 20))
@@ -114,7 +141,9 @@ class Gin(Enemy):
     def __init__(self, x, y, screen_size, group):
         images = [f"assets/enemies/gin/{image}" for image in os.listdir(
             "assets/enemies/gin") for _ in range(5)]
-        super().__init__(x, y, images, screen_size, group)
+        super().__init__(x, y, images, screen_size, group,
+                         "assets/sounds/gin.wav", volume=0.2)
+        self.sound_reload = 0.03
         self.horizontal_speed = 5
         self.reward = 150
         self.hp = 150

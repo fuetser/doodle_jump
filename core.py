@@ -272,9 +272,11 @@ class Group():
             if sprite.to_delete:
                 self.sprites.pop(index)
 
-    def draw(self, win):
+    def draw(self, win, sort=None):
         """метод для отрисовки спрайтов из группы"""
-        for sprite in self.sprites:
+        sprites = self.sprites if sort is None else sorted(
+            self.sprites, key=sort)
+        for sprite in sprites:
             win.blit(sprite.image, sprite.rect)
 
     def clear(self):
@@ -332,3 +334,39 @@ class Particle():
         self.lifespan -= 1
         if self.lifespan <= 0 or self.radius <= 0:
             self.to_delete = True
+
+
+class GlowingParticle():
+    """Класс для создания светящихся частиц"""
+
+    def __init__(self, x, y, radius, lifespan=120, direction=1, momentum=3):
+        self.x = x
+        self.y = y
+        self.radius = radius
+        self.lifespan = lifespan
+        self.direction = direction
+        self.v_momentum = momentum
+        self.speed_x = random.random() * 5 * direction
+        self.gravity = 0.2
+        self.to_delete = False
+        self.create_image()
+
+    def update(self):
+        self.x += self.speed_x
+        self.v_momentum += self.gravity
+        self.y += self.v_momentum
+        self.lifespan -= 1
+        self.radius -= random.random()
+        if self.lifespan <= 0 or self.radius <= 0:
+            self.to_delete = True
+        else:
+            self.create_image()
+
+    def draw(self, win):
+        win.blit(self.image, (self.x - self.radius, self.y - self.radius),
+                 special_flags=pygame.BLEND_RGB_ADD)
+
+    def create_image(self):
+        self.image = pygame.Surface((self.radius * 2, self.radius * 2))
+        pygame.draw.circle(self.image, (20, 20, 20),
+                           (self.radius, self.radius), self.radius)

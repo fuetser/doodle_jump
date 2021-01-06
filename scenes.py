@@ -53,6 +53,12 @@ class Level(GameScene):
         self.silver_coin_spawn = 0
         self.golden_coin_spawn = 0
 
+        # вероятности спавна врагов (0, 1)
+        self.medusa_spawn = 1
+        self.gin_spawn = 0
+        self.eye_spawn = 0
+        self.dragon_spawn = 0
+
     def spawn_chuck(self, start_y=0):
         """метод для спавна игрового чанка"""
         totalh = random.randrange(-50, 100)
@@ -89,20 +95,22 @@ class Level(GameScene):
         item = None
         value = random.random()
         if 0.1 < value < 0.2:
-            item = Spring(x + 10, y - 5, self.size)
+            item = Spring(x + 10, y - 10, self.size)
         elif 0.2 < value < 0.3:
             item = PropellerHat(x + 10, y - 30, self.size, self.hat_upgrade)
-        elif 0.2 < value < 0.45:
-            item = Trampoline(x, y - 15, self.size)
         elif 0.3 < value < 0.4:
+            item = Trampoline(x, y - 15, self.size)
+        elif 0.4 < value < 0.5:
             item = Jetpack(x + 13, y - 45, self.size, self.jetpack_upgrade)
         elif 0.5 < value < 0.6:
             item = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
         elif 0.6 < value < 0.7:
             item = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
-        # elif 0.7 < value < 0.8:
-        #     item = Hole(x, y, self.size)
-        elif value < 0.8:
+        elif 0.7 < value < 0.8:
+            item = Hole(x, y, self.size)
+        elif 0.8 < value < 0.9:
+            item = Rocket(x + 10, y - 30, self.size)
+        else:
             item = self.spawn_coin(x + 3, y - 10, self.size)
         if item is not None:
             platform.add_item(item)
@@ -126,28 +134,49 @@ class Level(GameScene):
             self.bronze_coin_spawn = 0.025
         elif self.score > 10000:
             self.golden_coin_spawn = min(self.golden_coin_spawn + 0.0025, 0.9)
-            self.silver_coin_spawn = max(self.silver_coin_spawn - 0.001, 0.35)
+            self.silver_coin_spawn = max(self.silver_coin_spawn - 0.001, 0.4)
             self.bronze_coin_spawn = max(self.bronze_coin_spawn - 0.002, 0.1)
         elif self.score > 5000:
             self.silver_coin_spawn = min(self.silver_coin_spawn + 0.0025, 0.9)
-            self.bronze_coin_spawn = max(self.bronze_coin_spawn - 0.001, 0.35)
+            self.bronze_coin_spawn = max(self.bronze_coin_spawn - 0.001, 0.4)
 
     def spawn_enemies(self):
         """метод для спавна врагов"""
-        if len(self.enemies) == 0 and self.score > 10000:
-            if self.score - self.enemy_height > 2000:
-                self.enemy_height = self.score
+        diff = random.randrange(1500, 2500)
+        if self.score > 7000 and self.score - self.enemy_height > diff:
+            value = random.random()
+            enemy = Medusa(0, 0, self.size, self.items)
+            if self.eye_spawn < value <= self.dragon_spawn:
+                enemy = Dragon(0, 0, self.size, self.items)
+            elif self.gin_spawn < value <= self.eye_spawn:
                 enemy = FlyingEye(0, 0, self.size, self.items)
-                self.enemies.add(enemy)
+            elif self.medusa_spawn < value <= self.gin_spawn:
+                enemy = Gin(0, 0, self.size, self.items)
+            self.enemy_height = self.score
+            self.enemies.add(enemy)
+
+    def update_enemies_spawn(self):
+        """метод для обновления шанса спавна врагов с увеличением высоты"""
+        if self.score > 16000:
+            self.dragon_spawn = min(self.dragon_spawn + 0.025, 0.9)
+            self.eye_spawn = max(self.eye_spawn - 0.001, 0.4)
+            self.gin_spawn = max(self.gin_spawn - 0.002, 0.25)
+            self.medusa_spawn = max(self.medusa_spawn - 0.004, 0.1)
+        elif self.score > 12500:
+            self.eye_spawn = min(self.eye_spawn + 0.025, 0.9)
+            self.gin_spawn = max(self.gin_spawn - 0.001, 0.4)
+            self.medusa_spawn = max(self.medusa_spawn - 0.001, 0.2)
+        elif self.score > 9000:
+            self.gin_spawn = min(self.gin_spawn + 0.025, 0.9)
+            self.medusa_spawn = max(self.medusa_spawn - 0.001, 0.4)
 
     def check_collisions(self):
         """метод для обработки всех столкновений"""
+        ignore = (self.main_character.shield, self.main_character.magnet)
         for group in (self.platforms, self.items, self.enemies):
-            ignore = (self.main_character.shield, self.main_character.magnet)
             for coll in group.get_collisions(self.main_character, ignore):
                 self.scroll_down = self.main_character.process_collision(coll)
             self.main_character.process_magnet_collisions(group)
-
         if self.main_character.collides(self.bottom_rect) or self.main_character.game_over:
             self.game_over()
 
@@ -160,7 +189,7 @@ class Level(GameScene):
             win.blit(self.background, (0, relative_background_y))
         self.platforms.draw(win)
         self.main_character.draw(win)
-        self.items.draw(win)
+        self.items.draw(win, sort=lambda sprite: sprite.draw_order)
         self.enemies.draw(win)
         win.blit(self.render_score(), (10, 10))
         money = self.render_money()
@@ -188,12 +217,12 @@ class Level(GameScene):
 
         self.check_collisions()
         self.handle_movement()
-        self.main_character.update(
-            self.enemies[0] if len(self.enemies) else None)
+        self.main_character.update(self.enemies)
         self.enemies.update(self.offset if self.scroll_down else 0)
         self.items.update(self.offset if self.scroll_down else 0,
                           player=self.main_character)
         self.update_coin_spawn()
+        self.update_enemies_spawn()
 
     def handle_movement(self):
         """метод для обработки движения персонажа и платформ"""
@@ -297,9 +326,17 @@ class Level(GameScene):
         self.scroll_down = False
         self.move_right = False
         self.move_left = False
+        self.reset_spawn_values()
+
+    def reset_spawn_values(self):
+        """метод для сброса вероятностей спавна предметов"""
         self.bronze_coin_spawn = 1
         self.silver_coin_spawn = 0
         self.golden_coin_spawn = 0
+        self.medusa_spawn = 1
+        self.gin_spawn = 0
+        self.eye_spawn = 0
+        self.dragon_spawn = 0
 
     def revive_game(self):
         """метод для продолжения игры после проигрыша"""
@@ -493,26 +530,26 @@ class ShopMenu(GameScene):
         self.menu_button = StaticGameObject(50, 525,
                                             "assets/ui/menu_button.png",
                                             self.size, convert_alpha=True)
-        self.magnet_item = ShopItem(50, 25, self.size, "Magnet",
+        self.magnet_item = ShopItem(75, 25, self.size, "Magnet",
                                     level=self.magnet_level)
-        self.shield_item = ShopItem(50, 150, self.size, "Shield",
+        self.shield_item = ShopItem(75, 150, self.size, "Shield",
                                     level=self.shield_level)
-        self.hat_item = ShopItem(50, 275, self.size, "Hat",
+        self.hat_item = ShopItem(75, 275, self.size, "Hat",
                                  level=self.hat_level)
-        self.jetpack_item = ShopItem(50, 400, self.size, "Jetpack",
+        self.jetpack_item = ShopItem(75, 400, self.size, "Jetpack",
                                      level=self.jetpack_level)
-        self.damage_item = ShopItem(300, 25, self.size, "Damage",
+        self.damage_item = ShopItem(325, 25, self.size, "Damage",
                                     level=self.damage_level)
-        self.reload_item = ShopItem(300, 150, self.size, "Reload",
+        self.reload_item = ShopItem(325, 150, self.size, "Reload",
                                     level=self.reload_level)
-        self.jump_item = ShopItem(300, 275, self.size, "Jump",
+        self.jump_item = ShopItem(325, 275, self.size, "Jump",
                                   level=self.jump_level)
         self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
         self.upgrade_sound = pygame.mixer.Sound(
             "assets/sounds/upgrade_unlock.wav")
         self.background = pygame.image.load("assets/ui/shop_bg.jpg").convert()
         self.click_sound.set_volume(0.4)
-        self.upgrade_sound.set_volume(0.4)
+        self.upgrade_sound.set_volume(0.3)
 
     def redraw(self, win):
         win.blit(self.background, (0, 0))
@@ -526,7 +563,7 @@ class ShopMenu(GameScene):
         self.jump_item.draw(win)
         money = self.font.render(f"{self.get_game_value(self.MONEY_KEY)}$",
                                  True, (0, 0, 0))
-        win.blit(money, (self.size[0] - money.get_width() - 25, 540))
+        win.blit(money, (self.size[0] - money.get_width() - 50, 540))
 
     def handle_events(self):
         for event in pygame.event.get():

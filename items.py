@@ -17,6 +17,7 @@ class GameItem(AnimatedGameObject):
         self.sound_length = self.sound.get_length()
         self.sound_timer = 0
         self.collect_with_item = False
+        self.draw_order = 0
 
     @classmethod
     def load_sound(cls, file, volume):
@@ -58,6 +59,7 @@ class FlyingGameItem(GameItem):
             x, y, images, screen_size, sound, volume, convert_alpha)
         self.lifespan = lifespan
         self.speed = speed
+        self.draw_order = 1
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
@@ -184,10 +186,10 @@ class Jetpack(FlyingGameItem):
     def spawn_particles(self, player: pygame.sprite.Sprite):
         color = random.choice(self.colors)
         direction = -1 if player.facing_right else 1
-        player.spawn_particles(player.x + player.rect.w - (
-                               player.rect.w + 5) * player.facing_right + 8,
-                               player.y + 53, color, amount=5,
-                               direction=direction)
+        x = player.x + player.rect.w - (player.rect.w + 5) * player.facing_right + 8
+        y = player.y + 50
+        player.spawn_particles(x, y, color, amount=5, direction=direction)
+        player.spawn_glowing_particles(x, y, direction=direction, lifespan=240)
 
 
 class Coin(GameItem):
@@ -284,6 +286,7 @@ class Shield(GameItem):
         self.lifespan = upgrade if upgrade is not None else 240
         self.image = self.static_image
         self.collect_with_item = True
+        self.draw_order = 2
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
@@ -322,6 +325,7 @@ class Magnet(GameItem):
         self.coverage_area = pygame.Rect(
             x - 100, y - 100, self.diameter, self.diameter)
         self.collect_with_item = True
+        self.draw_order = 2
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
@@ -357,6 +361,7 @@ class Hole(GameItem):
         self.colors = ((254, 0, 246), (69, 0, 169), (46, 0, 108), (30, 0, 70))
         self.collect_with_item = True
         self.sound.play()
+        self.draw_order = 3
 
     def activate(self, player: pygame.sprite.Sprite):
         player.game_over = True
@@ -380,8 +385,6 @@ class Rocket(FlyingGameItem):
                          volume=0.2, lifespan=180, speed=10)
         self.image = self.static_image
         self.facing_right = False
-        self.colors = ((60, 233, 255), (99, 229, 255), (138, 226, 255),
-                       (177, 242, 255), (216, 249, 255))
 
     def update(self, *args, **kwargs):
         player = kwargs.get("player")
@@ -389,7 +392,7 @@ class Rocket(FlyingGameItem):
             self.scroll(args[0])
         else:
             super().update()
-            self.set_pos((player.x - 15, player.top - player.rect.h - 10))
+            self.set_pos((player.x - 15, player.top - player.rect.h))
             self.spawn_particles(player)
             self.rotate_image(player.facing_right)
             self.play_sound(0.01)
@@ -398,12 +401,12 @@ class Rocket(FlyingGameItem):
             self.delete(player)
 
     def spawn_particles(self, player: pygame.sprite.Sprite):
-        for _ in range(15):
-            color = random.choice(self.colors)
-            life = random.randrange(30, 180)
-            player.spawn_particles(self.rect.center[0] - 3 + 6 * player.facing_right,
-                                   self.bottom - 5, color, amount=1,
-                                   momentum=5, lifespan=life)
+        x = self.rect.center[0] - 3 + 6 * player.facing_right
+        y = self.bottom - 5
+        for _ in range(20):
+            player.spawn_glowing_particles(x, y, amount=2,
+                                           momentum=random.randrange(2, 6),
+                                           radius=random.randrange(4, 12))
 
     def rotate_image(self, player_facing_right):
         if self.facing_right != player_facing_right:
