@@ -15,8 +15,8 @@ class Game():
         self.FPS = fps
         self.clock = pygame.time.Clock()
         pygame.display.set_caption("Doodle Jump")
-        pygame.display.set_icon(
-            pygame.image.load("assets/base_character72.png").convert_alpha())
+        pygame.display.set_icon(pygame.image.load(
+            "assets/character/character0.png").convert_alpha())
 
         self.main_menu = MainMenu(self.display, self, self.FPS)
         self.level = Level(self.display, self, self.FPS)

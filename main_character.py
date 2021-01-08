@@ -1,16 +1,18 @@
-from core import StaticGameObject, Group, Particle, GlowingParticle
+from core import *
 from enemies import Enemy
 from items import GameItem, Coin
+import os
 import pygame
 import random
 
 
-class MainCharacter(StaticGameObject):
+class MainCharacter(AnimatedGameObject):
     """Класс для создания главного персонажа"""
 
-    def __init__(self, x, y, image_path, screen_size, damage=None,
-                 reload_time=None, jump=None, convert_alpha=True):
-        super().__init__(x, y, image_path, screen_size, convert_alpha)
+    def __init__(self, x, y, screen_size, damage=None, reload_time=None, jump=None):
+        images = [f"assets/character/{image}" for image in os.listdir(
+            "assets/character")]
+        super().__init__(x, y, images, screen_size, create_static=False)
         self.width = self.image.get_width()
         self.height = self.image.get_height()
         self.v_momentum = 0  # текущее горизонтальное ускорение
@@ -52,12 +54,11 @@ class MainCharacter(StaticGameObject):
 
     def flip_image(self, direction: int):
         """метод для попворота персонажа в засимомти от направления движения"""
-        if direction > 0 and not self.facing_right:
-            self.image = pygame.transform.flip(self.image, True, False)
-            self.facing_right = True
-        elif direction < 0 and self.facing_right:
-            self.image = pygame.transform.flip(self.image, True, False)
-            self.facing_right = False
+        if (direction > 0) != self.facing_right:
+            self.images = tuple(map(
+                lambda img: pygame.transform.flip(img, True, False),
+                self.images))
+            self.facing_right = not self.facing_right
 
     def process_collision(self, coll: pygame.sprite.Sprite):
         """метод для обработки столкновений"""
@@ -80,7 +81,7 @@ class MainCharacter(StaticGameObject):
         if self.bottom > coll.top + 20:
             self.game_over = self.shield is None
         elif self.v_momentum > 0:
-            coll.delete()
+            coll.delete(spawn_coin=True)
 
     def process_platform(self, coll):
         """метод для обработки коллизий с платформами"""
@@ -146,10 +147,16 @@ class MainCharacter(StaticGameObject):
             self.calculate_bullets_collisions(enemy)
         if self.reload_timer > 0:
             self.reload_timer -= 1
+        self.update_image()
+
+    def update_image(self):
+        """метод для обновления изображения игрока"""
         if self.is_rotating:
             self.current_rotation += 12
             if self.current_rotation > 360:
                 self.is_rotating = False
+        self.current_frame = int(self.v_momentum < 0)
+        self.image = self.images[self.current_frame]
 
     def load_upgrades(self, damage=None, reload_time=None, jump=None):
         """метод для загрузки прокачки игрока при перезагрузке сцены"""

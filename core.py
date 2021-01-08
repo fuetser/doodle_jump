@@ -157,6 +157,7 @@ class GameScene():
         self.DAMAGE_KEY = "damage"
         self.RELOAD_KEY = "reload"
         self.JUMP_KEY = "jump"
+        self.ROCKET_KEY = "rocket"
 
     def redraw(self, win: pygame.Surface):
         """метод для отрисовки на заданной поверхности"""
@@ -211,21 +212,31 @@ class GameScene():
                 data = json.load(f)
         except Exception as err:
             print(err)
-            self.magnet_level = 0
-            self.shield_level = 0
-            self.hat_level = 0
-            self.jetpack_level = 0
-            self.damage_level = 0
-            self.reload_level = 0
-            self.jump_level = 0
+            self.set_default_levels()
         else:
-            self.magnet_level = data.get(self.MAGNET_KEY)
-            self.shield_level = data.get(self.SHIELD_KEY)
-            self.hat_level = data.get(self.HAT_KEY)
-            self.jetpack_level = data.get(self.JETPACK_KEY)
-            self.damage_level = data.get(self.DAMAGE_KEY)
-            self.reload_level = data.get(self.RELOAD_KEY)
-            self.jump_level = data.get(self.JUMP_KEY)
+            self.set_levels_from_data(data)
+
+    def set_default_levels(self):
+        """метод для устаноки минимального уровня предметам при ошибке загрузки"""
+        self.magnet_level = 0
+        self.shield_level = 0
+        self.hat_level = 0
+        self.jetpack_level = 0
+        self.damage_level = 0
+        self.reload_level = 0
+        self.jump_level = 0
+        self.rocket_level = 0
+
+    def set_levels_from_data(self, data):
+        """метод для установки уроыней предметов при успешной загрузке файла"""
+        self.magnet_level = data.get(self.MAGNET_KEY)
+        self.shield_level = data.get(self.SHIELD_KEY)
+        self.hat_level = data.get(self.HAT_KEY)
+        self.jetpack_level = data.get(self.JETPACK_KEY)
+        self.damage_level = data.get(self.DAMAGE_KEY)
+        self.reload_level = data.get(self.RELOAD_KEY)
+        self.jump_level = data.get(self.JUMP_KEY)
+        self.rocket_level = data.get(self.ROCKET_KEY)
 
 
 class Group():

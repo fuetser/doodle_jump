@@ -169,7 +169,7 @@ class Jetpack(FlyingGameItem):
             self.scroll(args[0])
         else:
             super().update()
-            self.rotate_image(player.facing_right)
+            self.flip_image(player.facing_right)
             self.set_pos(
                 (player.x + player.rect.w - 15 - player.rect.w * player.facing_right,
                  player.y + 5))
@@ -179,7 +179,7 @@ class Jetpack(FlyingGameItem):
         if self.lifespan == 0 or self.y > self.screen_height:
             self.delete(player)
 
-    def rotate_image(self, player_facing_right):
+    def flip_image(self, player_facing_right):
         if self.facing_right != player_facing_right:
             self.image = pygame.transform.flip(self.image, True, False)
 
@@ -222,6 +222,7 @@ class Coin(GameItem):
             if self.is_magnetized:
                 self.rect.x -= self.speed_x
                 self.rect.y -= self.speed_y
+                self.is_magnetized = False
         else:
             super().update()
 
@@ -233,7 +234,7 @@ class Coin(GameItem):
         self.is_magnetized = True
         self.speed_x = int((self.x - pos_x) / self.speed_coefficient)
         self.speed_y = int((self.y - pos_y) / self.speed_coefficient)
-        self.speed_coefficient = max(self.speed_coefficient - 0.125, 1)
+        self.speed_coefficient = max(self.speed_coefficient - 0.1, 1)
 
 
 class BronzeCoin(Coin):
@@ -364,7 +365,8 @@ class Hole(GameItem):
         self.draw_order = 3
 
     def activate(self, player: pygame.sprite.Sprite):
-        player.game_over = True
+        if player.shield is None:
+            player.game_over = True
 
     def update(self, *args, **kwargs):
         super().update(*args, **kwargs)
@@ -378,11 +380,13 @@ class Hole(GameItem):
 class Rocket(FlyingGameItem):
     """Класс для создания ракеты"""
 
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, upgrade=None):
         images = ("assets/items/rocket/static_rocket.png",
                   "assets/items/rocket/rocket.png")
+        speed = upgrade[0] if upgrade is not None else 10
+        lifespan = upgrade[1] if upgrade is not None else 180
         super().__init__(x, y, images, screen_size, "assets/sounds/jetpack.wav",
-                         volume=0.2, lifespan=180, speed=10)
+                         volume=0.2, lifespan=lifespan, speed=speed)
         self.image = self.static_image
         self.facing_right = False
 
@@ -392,9 +396,9 @@ class Rocket(FlyingGameItem):
             self.scroll(args[0])
         else:
             super().update()
-            self.set_pos((player.x - 15, player.top - player.rect.h))
+            self.set_pos((player.x - 10, player.top - player.rect.h))
             self.spawn_particles(player)
-            self.rotate_image(player.facing_right)
+            self.flip_image(player.facing_right)
             self.play_sound(0.01)
             self.lifespan -= 1
         if self.lifespan == 0 or self.y > self.screen_height:
@@ -408,6 +412,6 @@ class Rocket(FlyingGameItem):
                                            momentum=random.randrange(2, 6),
                                            radius=random.randrange(4, 12))
 
-    def rotate_image(self, player_facing_right):
+    def flip_image(self, player_facing_right):
         if self.facing_right != player_facing_right:
             self.image = pygame.transform.flip(self.image, True, False)

@@ -84,14 +84,14 @@ class Enemy(AnimatedGameObject):
         else:
             self.sound_timer -= step
 
-    def delete(self, *args, **kwargs):
-        if self.hp <= 0:
+    def delete(self, spawn_coin=False):
+        if self.hp <= 0 or spawn_coin:
             coin = HoloCoin(*self.rect.center,
                             (self.screen_width, self.screen_width),
                             price=self.reward)
             self.group.add(coin)
             self.death_sound.play()
-        super().delete(*args, **kwargs)
+        super().delete()
 
     def rotate_image(self):
         self.image = pygame.transform.flip(self.image, True, False)

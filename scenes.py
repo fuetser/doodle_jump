@@ -19,8 +19,8 @@ class Level(GameScene):
             "assets/ui/cycled_bg.jpg").convert()
         self.bg_height = self.background.get_height()
         self.main_character = MainCharacter(
-            200, 100, "assets/base_character72.png", self.size,
-            self.damage_upgrade, self.reload_upgrade, self.jump_upgrade)
+            200, 100, self.size, self.damage_upgrade,
+            self.reload_upgrade, self.jump_upgrade)
         # прямоугольник для проверки упал игрок вниз или нет
         self.bottom_rect = pygame.Rect(
             -100, self.size[0] - 2, self.size[1] + 200, 2)
@@ -92,11 +92,19 @@ class Level(GameScene):
                 self.spawn_objects(platform, x, y)
 
     def spawn_objects(self, platform: Platform, x: int, y: int):
-        item = None
+        """метод для спавна игровых объектов в сцене"""
+        if random.choice((True, False)):
+            item = self.spawn_item(x, y)
+        else:
+            item = self.spawn_coin(x, y)
+        platform.add_item(item)
+        self.items.add(item)
+
+    def spawn_item(self, x, y):
+        """метод для спавна предмета"""
         value = random.random()
-        if 0.1 < value < 0.2:
-            item = Spring(x + 10, y - 10, self.size)
-        elif 0.2 < value < 0.3:
+        item = Spring(x + 10, y - 10, self.size)
+        if 0.2 < value < 0.3:
             item = PropellerHat(x + 10, y - 30, self.size, self.hat_upgrade)
         elif 0.3 < value < 0.4:
             item = Trampoline(x, y - 15, self.size)
@@ -104,19 +112,15 @@ class Level(GameScene):
             item = Jetpack(x + 13, y - 45, self.size, self.jetpack_upgrade)
         elif 0.5 < value < 0.6:
             item = Magnet(x + 10, y - 25, self.size, self.magnet_upgrade)
-        elif 0.6 < value < 0.7:
+        elif 0.6 < value < 0.7 and self.score > 5000:
             item = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
-        elif 0.7 < value < 0.8:
+        elif 0.7 < value < 0.8 and self.score > 10000:
+            item = Rocket(x + 10, y - 30, self.size, self.rocket_upgrade)
+        elif 0.8 < value < 0.9 and self.score > 5000:
             item = Hole(x, y, self.size)
-        elif 0.8 < value < 0.9:
-            item = Rocket(x + 10, y - 30, self.size)
-        else:
-            item = self.spawn_coin(x + 3, y - 10, self.size)
-        if item is not None:
-            platform.add_item(item)
-            self.items.add(item)
+        return item
 
-    def spawn_coin(self, x, y, screen_size):
+    def spawn_coin(self, x, y):
         """метод для спавна монеток"""
         value = random.random()
         item = BronzeCoin(x + 10, y - 25, self.size)
@@ -145,13 +149,14 @@ class Level(GameScene):
         diff = random.randrange(1500, 2500)
         if self.score > 7000 and self.score - self.enemy_height > diff:
             value = random.random()
-            enemy = Medusa(0, 0, self.size, self.items)
+            x_pos = random.randrange(0, self.size[0])
+            enemy = Medusa(x_pos, -50, self.size, self.items)
             if self.eye_spawn < value <= self.dragon_spawn:
-                enemy = Dragon(0, 0, self.size, self.items)
+                enemy = Dragon(x_pos, -50, self.size, self.items)
             elif self.gin_spawn < value <= self.eye_spawn:
-                enemy = FlyingEye(0, 0, self.size, self.items)
+                enemy = FlyingEye(x_pos, -50, self.size, self.items)
             elif self.medusa_spawn < value <= self.gin_spawn:
-                enemy = Gin(0, 0, self.size, self.items)
+                enemy = Gin(x_pos, -50, self.size, self.items)
             self.enemy_height = self.score
             self.enemies.add(enemy)
 
@@ -275,6 +280,8 @@ class Level(GameScene):
             str(self.reload_level))
         self.jump_upgrade = data.get(self.JUMP_KEY).get(
             str(self.jump_level))
+        self.rocket_upgrade = data.get(self.ROCKET_KEY).get(
+            str(self.rocket_level))
 
     def game_over(self):
         """метод для завершения уровня"""
@@ -341,7 +348,9 @@ class Level(GameScene):
     def revive_game(self):
         """метод для продолжения игры после проигрыша"""
         self.enemies.clear()
+        self.items.clear()
         self.main_character.set_pos((250, 150))
+        self.main_character.game_over = False
         self.move_left = False
         self.move_right = False
         self.show(spawn_chuck=False)
@@ -530,20 +539,24 @@ class ShopMenu(GameScene):
         self.menu_button = StaticGameObject(50, 525,
                                             "assets/ui/menu_button.png",
                                             self.size, convert_alpha=True)
-        self.magnet_item = ShopItem(75, 25, self.size, "Magnet",
-                                    level=self.magnet_level)
-        self.shield_item = ShopItem(75, 150, self.size, "Shield",
-                                    level=self.shield_level)
-        self.hat_item = ShopItem(75, 275, self.size, "Hat",
-                                 level=self.hat_level)
-        self.jetpack_item = ShopItem(75, 400, self.size, "Jetpack",
-                                     level=self.jetpack_level)
-        self.damage_item = ShopItem(325, 25, self.size, "Damage",
-                                    level=self.damage_level)
-        self.reload_item = ShopItem(325, 150, self.size, "Reload",
-                                    level=self.reload_level)
-        self.jump_item = ShopItem(325, 275, self.size, "Jump",
-                                  level=self.jump_level)
+        self.items = (
+            (ShopItem(75, 25, self.size, "Magnet", level=self.magnet_level),
+             self.MAGNET_KEY),
+            (ShopItem(75, 150, self.size, "Shield", level=self.shield_level),
+             self.SHIELD_KEY),
+            (ShopItem(75, 275, self.size, "Hat", level=self.hat_level),
+             self.HAT_KEY),
+            (ShopItem(75, 400, self.size, "Jetpack", level=self.jetpack_level),
+             self.JETPACK_KEY),
+            (ShopItem(325, 25, self.size, "Damage", level=self.damage_level),
+             self.DAMAGE_KEY),
+            (ShopItem(325, 150, self.size, "Reload", level=self.reload_level),
+             self.RELOAD_KEY),
+            (ShopItem(325, 275, self.size, "Jump", level=self.jump_level),
+             self.JUMP_KEY),
+            (ShopItem(325, 400, self.size, "Rocket", level=self.rocket_level),
+             self.ROCKET_KEY)
+        )
         self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
         self.upgrade_sound = pygame.mixer.Sound(
             "assets/sounds/upgrade_unlock.wav")
@@ -554,16 +567,11 @@ class ShopMenu(GameScene):
     def redraw(self, win):
         win.blit(self.background, (0, 0))
         win.blit(self.menu_button.image, self.menu_button.rect)
-        self.magnet_item.draw(win)
-        self.shield_item.draw(win)
-        self.hat_item.draw(win)
-        self.jetpack_item.draw(win)
-        self.damage_item.draw(win)
-        self.reload_item.draw(win)
-        self.jump_item.draw(win)
+        for item, _ in self.items:
+            item.draw(win)
         money = self.font.render(f"{self.get_game_value(self.MONEY_KEY)}$",
                                  True, (0, 0, 0))
-        win.blit(money, (self.size[0] - money.get_width() - 50, 540))
+        win.blit(money, (self.size[0] - money.get_width() - 50, 535))
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -576,27 +584,9 @@ class ShopMenu(GameScene):
                     self.manager.load_scene(0)
                     self.click_sound.play()
                     self.close()
-                if self.magnet_item.clicked(event.pos):
-                    self.purchase_upgrade(
-                        key=self.MAGNET_KEY, item=self.magnet_item)
-                if self.shield_item.clicked(event.pos):
-                    self.purchase_upgrade(
-                        key=self.SHIELD_KEY, item=self.shield_item)
-                if self.hat_item.clicked(event.pos):
-                    self.purchase_upgrade(
-                        key=self.HAT_KEY, item=self.hat_item)
-                if self.jetpack_item.clicked(event.pos):
-                    self.purchase_upgrade(
-                        key=self.JETPACK_KEY, item=self.jetpack_item)
-                if self.damage_item.clicked(event.pos):
-                    self.purchase_upgrade(
-                        key=self.DAMAGE_KEY, item=self.damage_item)
-                if self.reload_item.clicked(event.pos):
-                    self.purchase_upgrade(
-                        key=self.RELOAD_KEY, item=self.reload_item)
-                if self.jump_item.clicked(event.pos):
-                    self.purchase_upgrade(
-                        key=self.JUMP_KEY, item=self.jump_item)
+                for item, key in self.items:
+                    if item.clicked(event.pos):
+                        self.purchase_upgrade(key, item)
 
     def purchase_upgrade(self, key, item):
         """метод для покупки улучшения"""
