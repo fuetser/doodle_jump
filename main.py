@@ -22,12 +22,15 @@ class Game():
         self.level = Level(self.display, self, self.FPS)
         self.game_over_menu = GameOverMenu(self.display, self, self.FPS)
         self.shop = ShopMenu(self.display, self, self.FPS)
+        self.pause_menu = PauseMenu(self.display, self, self.FPS)
 
         self.load_main_menu = True
         self.load_level = False
         self.load_game_over_menu = False
         self.revive_level = False
         self.load_shop = False
+        self.load_pause_menu = False
+        self.clear_groups = True
 
         self.level_music_playing = True
 
@@ -39,29 +42,31 @@ class Game():
             self.level.restart()
             self.level.show()
         elif self.revive_level:
-            self.level.revive_game()
+            self.level.revive_game(self.clear_groups)
         elif self.load_game_over_menu:
             self.game_over_menu.set_score(self.level.get_score())
             self.game_over_menu.update_money(self.level.get_collected_money())
             self.game_over_menu.show()
         elif self.load_shop:
             self.shop.show()
+        elif self.load_pause_menu:
+            self.pause_menu.show()
 
     def play_music(self):
         """метод для воспроизведения фоновой музыки в зависимости от сцены"""
-        if self.load_level or self.revive_level or self.load_game_over_menu:
-            if not self.level_music_playing:
-                pygame.mixer.music.load("assets/music/level_music.mp3")
-                pygame.mixer.music.set_volume(0.25)
+        if self.load_main_menu or self.load_shop:
+            if self.level_music_playing:
+                pygame.mixer.music.load("assets/music/menu_music.ogg")
+                pygame.mixer.music.set_volume(0.2)
                 pygame.mixer.music.play(-1)
-                self.level_music_playing = True
-        elif self.level_music_playing:
-            pygame.mixer.music.load("assets/music/menu_music.ogg")
-            pygame.mixer.music.set_volume(0.2)
+                self.level_music_playing = False
+        elif not self.level_music_playing:
+            pygame.mixer.music.load("assets/music/level_music.mp3")
+            pygame.mixer.music.set_volume(0.25)
             pygame.mixer.music.play(-1)
-            self.level_music_playing = False
+            self.level_music_playing = True
 
-    def load_scene(self, index):
+    def load_scene(self, index, clear_groups=True):
         """метод для загрузки сцены"""
         self.reset_flags()
         if index == 0:
@@ -74,6 +79,9 @@ class Game():
             self.revive_level = True
         elif index == 4:
             self.load_shop = True
+        elif index == 5:
+            self.load_pause_menu = True
+        self.clear_groups = clear_groups
 
     def reset_flags(self):
         """метод для сброса значений флагов загрузки сцен"""
@@ -82,6 +90,7 @@ class Game():
         self.load_game_over_menu = False
         self.load_shop = False
         self.revive_level = False
+        self.load_pause_menu = False
 
     def run(self):
         while True:

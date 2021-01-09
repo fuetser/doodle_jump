@@ -24,12 +24,6 @@ class Enemy(AnimatedGameObject):
         self.facing_right = True
         self.blood_colors = ((254, 132, 132), (254, 92, 92), (254, 32, 32),
                              (186, 0, 0), (107, 0, 0), (83, 0, 0))
-        # self.colors = ((184, 2, 1), (254, 101, 23), (255, 132, 62),
-        #                (132, 4, 3), (236, 16, 12)) red
-        # self.colors = ((27, 2, 63), (0, 106, 249), (0, 192, 249), neon
-        #                (220, 0, 254), (188, 0, 254), (83, 25, 251)) blue
-        # self.colors = ((103, 197, 10), (255, 217, 0), (124, 215, 194),
-        #                (5, 78, 111), (20, 20, 20))
 
     @classmethod
     def load_sound(cls, sound, volume):

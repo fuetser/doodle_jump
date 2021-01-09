@@ -63,7 +63,6 @@ class FlyingGameItem(GameItem):
 
     def activate(self, player: pygame.sprite.Sprite):
         if not self.activated:
-            self.sound.play()
             player.enable_gravity(False)
             player.set_flying_object(self)
             self.activated = True
@@ -111,7 +110,7 @@ class PropellerHat(FlyingGameItem):
         speed = upgrade[0] if upgrade is not None else 2
         lifespan = upgrade[1] if upgrade is not None else 180
         super().__init__(x, y, images, screen_size, "assets/sounds/hat.wav",
-                         volume=0.4, lifespan=lifespan, speed=speed)
+                         volume=0.6, lifespan=lifespan, speed=speed)
         self.colors = ((64, 64, 64), (128, 128, 128), (192, 192, 192))
 
     def update(self, *args, **kwargs):
@@ -158,7 +157,7 @@ class Jetpack(FlyingGameItem):
         speed = upgrade[0] if upgrade is not None else 3
         lifespan = upgrade[1] if upgrade is not None else 240
         super().__init__(x, y, images, screen_size, "assets/sounds/jetpack.wav",
-                         volume=0.15, lifespan=lifespan, speed=speed)
+                         volume=0.25, lifespan=lifespan, speed=speed)
         self.image = self.static_image
         self.facing_right = True
         self.colors = ((255, 77, 0), (255, 157, 0), (255, 234, 0))
@@ -241,7 +240,6 @@ class BronzeCoin(Coin):
     """Класс для создания бронзовых монеток"""
 
     def __init__(self, x, y, screen_size, ignore_scroll=False):
-        # BronzeCoin.load_images(images, create_static=False)
         super().__init__(x, y, "assets/items/bronze_coin", screen_size,
                          price=1, ignore_scroll=ignore_scroll)
         self.colors = ((205, 127, 50), (110, 58, 7), (195, 131, 79))
@@ -386,7 +384,7 @@ class Rocket(FlyingGameItem):
         speed = upgrade[0] if upgrade is not None else 10
         lifespan = upgrade[1] if upgrade is not None else 180
         super().__init__(x, y, images, screen_size, "assets/sounds/jetpack.wav",
-                         volume=0.2, lifespan=lifespan, speed=speed)
+                         volume=0.35, lifespan=lifespan, speed=speed)
         self.image = self.static_image
         self.facing_right = False
 

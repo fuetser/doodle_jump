@@ -115,7 +115,7 @@ class Level(GameScene):
         elif 0.6 < value < 0.7 and self.score > 5000:
             item = Shield(x + 10, y - 25, self.size, self.shield_upgrade)
         elif 0.7 < value < 0.8 and self.score > 10000:
-            item = Rocket(x + 10, y - 30, self.size, self.rocket_upgrade)
+            item = Rocket(x + 10, y - 35, self.size, self.rocket_upgrade)
         elif 0.8 < value < 0.9 and self.score > 5000:
             item = Hole(x, y, self.size)
         return item
@@ -244,6 +244,9 @@ class Level(GameScene):
 
     def handle_keyboard_events(self, event, state=True):
         """метод для обработки нажатий клавиатуры"""
+        if event.key == pygame.K_ESCAPE:
+            self.manager.load_scene(5)
+            self.close()
         if event.key == pygame.K_a:
             self.move_left = state
         if event.key == pygame.K_d:
@@ -345,10 +348,13 @@ class Level(GameScene):
         self.eye_spawn = 0
         self.dragon_spawn = 0
 
-    def revive_game(self):
+    def revive_game(self, clear_groups=True):
         """метод для продолжения игры после проигрыша"""
-        self.enemies.clear()
-        self.items.clear()
+        if clear_groups:
+            self.enemies.clear()
+            for item in self.items:
+                if isinstance(item, Hole):
+                    item.delete()
         self.main_character.set_pos((250, 150))
         self.main_character.game_over = False
         self.move_left = False
@@ -659,3 +665,36 @@ class ShopItem(StaticGameObject):
     def clicked(self, position):
         """метод для проверки нажатия на кнопку"""
         return self.plus_button.collidepoint(position)
+
+
+class PauseMenu(GameOverMenu):
+    """Класс для создания меню паузы"""
+
+    def __init__(self, display, manager, fps):
+        super().__init__(display, manager, fps)
+        self.background = pygame.image.load("assets/ui/pause_bg.png").convert()
+        self.continue_button = StaticGameObject(
+            228, 300, "assets/ui/continue_button.png", self.size)
+        self.menu_button = StaticGameObject(
+            228, 375, "assets/ui/menu_button.png", self.size)
+        self.click_sound = pygame.mixer.Sound("assets/sounds/click.wav")
+        self.click_sound.set_volume(0.6)
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.continue_button.collidepoint(event.pos):
+                    self.manager.load_scene(3, clear_groups=False)
+                    self.close()
+                if self.menu_button.collidepoint(event.pos):
+                    self.manager.load_scene(0)
+                    self.close()
+
+    def redraw(self, win: pygame.Surface):
+        win.blit(self.background, (50, 50))
+        win.blit(self.continue_button.image, self.continue_button.rect)
+        win.blit(self.menu_button.image, self.menu_button.rect)
