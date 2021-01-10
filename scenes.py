@@ -45,7 +45,7 @@ class Level(GameScene):
         self.lose_sound = pygame.mixer.Sound("assets/sounds/lose.wav")
         self.lose_sound.set_volume(0.4)
 
-        self.min_width = 100
+        self.min_width = 125
         self.min_height = 50
         self.chunck_height = self.size[1]
         # вероятности спавна монеток (0, 1)
@@ -85,10 +85,14 @@ class Level(GameScene):
     def spawn_platform(self, x: int, y: int):
         """метод для генерации платформы"""
         if random.choice((True, True, True, False)) and 0 <= x < self.size[0] - 65:
-            platform = Platform(
-                x, y, "assets/platforms/platform72.png", self.size)
+            value = random.random()
+            platform = StaticPlatform(x, y, self.size)
+            if value < 0.15:
+                platform = BreakingPlatform(x, y, self.size)
+            elif value < 0.3:
+                platform = MovingPlatform(x, y, self.size)
             self.platforms.add(platform)
-            if random.random() > 0.8:
+            if value > 0.65 and isinstance(platform, StaticPlatform):
                 self.spawn_objects(platform, x, y)
 
     def spawn_objects(self, platform: Platform, x: int, y: int):
@@ -226,6 +230,7 @@ class Level(GameScene):
         self.enemies.update(self.offset if self.scroll_down else 0)
         self.items.update(self.offset if self.scroll_down else 0,
                           player=self.main_character)
+        self.platforms.update(self.offset if self.scroll_down else 0)
         self.update_coin_spawn()
         self.update_enemies_spawn()
 
@@ -240,7 +245,6 @@ class Level(GameScene):
         self.move_character(8)
         if self.scroll_down:
             self.scroll(self.offset)
-            self.platforms.update(self.offset)
 
     def handle_keyboard_events(self, event, state=True):
         """метод для обработки нажатий клавиатуры"""
@@ -330,7 +334,7 @@ class Level(GameScene):
         self.score = 0
         self.bg_pos = -self.background.get_height() + self.size[1]
         self.offset = 5
-        self.min_width = 100
+        self.min_width = 125
         self.min_height = 50
         self.chunck_height = self.size[1]
         self.scroll_down = False
@@ -355,6 +359,8 @@ class Level(GameScene):
             for item in self.items:
                 if isinstance(item, Hole):
                     item.delete()
+        self.enemies.update(0)
+        self.items.update(0, player=self.main_character)
         self.main_character.set_pos((250, 150))
         self.main_character.game_over = False
         self.move_left = False

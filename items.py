@@ -394,7 +394,7 @@ class Rocket(FlyingGameItem):
             self.scroll(args[0])
         else:
             super().update()
-            self.set_pos((player.x - 10, player.top - player.rect.h))
+            self.set_pos((player.x - 15, player.top - player.rect.h))
             self.spawn_particles(player)
             self.flip_image(player.facing_right)
             self.play_sound(0.01)

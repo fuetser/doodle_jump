@@ -87,8 +87,7 @@ class MainCharacter(AnimatedGameObject):
         """метод для обработки коллизий с платформами"""
         scroll = True
         if self.bottom <= coll.top + 10:
-            self.rect.bottom = coll.rect.top
-            self.jump()
+            coll.activate(self)
         else:
             scroll = False
         return scroll
