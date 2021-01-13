@@ -208,6 +208,10 @@ class MainCharacter(StaticGameObject):
         if self.flying_object is not None:
             self.flying_object.sound.stop()
 
+    def unmute(self):
+        if self.flying_object is not None:
+            self.flying_object.sound.unpause()
+
     def rotate(self):
         """метод для запуска вращения игрока вокруг своей оси"""
         if not self.is_rotating:
