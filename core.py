@@ -13,6 +13,7 @@ class GameObject(pygame.sprite.Sprite):
         self._id = GameObject.object_id
         GameObject.object_id += 1
         self.to_delete = False
+        self.VOLUME_KEY = "volume"
 
     def update(self):
         """метод для обновления положения объекта"""
@@ -39,9 +40,18 @@ class GameObject(pygame.sprite.Sprite):
         """метод, выполняемый при удалении объекта"""
         pass
 
-    def process_collision(self, item: pygame.sprite.Sprite):
-        """метод для обработки столкновения с объетами"""
-        pass
+    def get_game_value(self, key):
+        """метод для получения значения из файла игровых сохранений"""
+        try:
+            with open("values.json", "r", encoding="u8") as f:
+                data = json.load(f)
+        except Exception as err:
+            print(err)
+            result = -1
+        else:
+            result = data.get(key, -1)
+        finally:
+            return result
 
     def __eq__(self, other):
         """метод для сравнения спрайтов"""

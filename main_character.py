@@ -32,15 +32,19 @@ class MainCharacter(AnimatedGameObject):
         self.reload_timer = 0
         self.shoot_colors = (
             (187, 210, 102), (127, 163, 1), (70, 91, 0), (204, 221, 141))
+        self.volume_ratio = 1
         self.jump_sound = pygame.mixer.Sound("assets/sounds/jump.wav")
         self.shoot_sound = pygame.mixer.Sound("assets/sounds/shoot.wav")
-        self.jump_sound.set_volume(0.45)
-        self.shoot_sound.set_volume(0.3)
+        self.update_sound_volume()
+        self.jump_sound.set_volume(0.45 * self.volume_ratio)
+        self.shoot_sound.set_volume(0.3 * self.volume_ratio)
         self.bullets = Group()
         self.particles = Group()
         self.is_rotating = False
         self.current_rotation = 0
         self.item_pos = self.rect.center
+        self.particles_coefficient = 1
+        self.PARTICLES_KEY = "particles"
 
     def move_h(self, offset: int):
         """метод для перемещения персонажа по горизонтали
@@ -167,7 +171,7 @@ class MainCharacter(AnimatedGameObject):
                         amount=10, direction=None, momentum=3, lifespan=120):
         x = self.rect.center[0] if x is None else x
         y = self.bottom if y is None else y
-        for _ in range(amount):
+        for _ in range(round(amount * self.particles_coefficient)):
             if direction is None:
                 direction = random.choice((-1, 0, 1))
             self.particles.raw_add(Particle(x, y, radius, color,
@@ -178,7 +182,7 @@ class MainCharacter(AnimatedGameObject):
     def spawn_explosion(self, x, y, colors, amount=2, radius=(2, 8),
                         repeat=25, momentum=4):
         """метод для спавна взрыва из частиц"""
-        for _ in range(repeat):
+        for _ in range(round(repeat * self.particles_coefficient)):
             res_momentum = random.randrange(-momentum, momentum)
             res_radius = random.randint(*radius)
             color = random.choice(colors)
@@ -188,7 +192,7 @@ class MainCharacter(AnimatedGameObject):
     def spawn_glowing_particles(self, x, y, amount=10, direction=None,
                                 radius=8, momentum=3, lifespan=120):
         """метод для спавна светящихся частиц"""
-        for _ in range(amount):
+        for _ in range(round(amount * self.particles_coefficient)):
             if direction is None:
                 direction = random.choice((-1, 0, 1))
             particle = GlowingParticle(x, y, radius, direction=direction,
@@ -208,16 +212,18 @@ class MainCharacter(AnimatedGameObject):
         self.bullets.draw(win)
         self.particles.raw_draw(win)
 
-    def mute(self):
-        """метод для отключения звуков игрока"""
-        if self.flying_object is not None:
-            self.flying_object.sound.stop()
-
     def rotate(self):
         """метод для запуска вращения игрока вокруг своей оси"""
         if not self.is_rotating:
             self.is_rotating = True
             self.current_rotation = 0
+
+    def update_sound_volume(self):
+        """метод для обновления громкости звука предмета"""
+        if (ratio := self.get_game_value(self.VOLUME_KEY)) != -1:
+            self.volume_ratio = ratio
+            self.jump_sound.set_volume(0.45 * self.volume_ratio)
+            self.shoot_sound.set_volume(0.3 * self.volume_ratio)
 
     def add_momentum(self, amount: int):
         """метод для изменения ускорения игрока"""
@@ -242,6 +248,11 @@ class MainCharacter(AnimatedGameObject):
 
     def get_collected_money(self) -> int:
         return self.money_collected
+
+    def update_particles_amount(self):
+        """метод для получения коэффициента количества частиц"""
+        if (amount := self.get_game_value(self.PARTICLES_KEY)) != -1:
+            self.particles_coefficient = amount
 
     def set_shield(self, shield=None):
         if self.shield is not None and shield is not None:

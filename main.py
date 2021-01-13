@@ -23,6 +23,7 @@ class Game():
         self.game_over_menu = GameOverMenu(self.display, self, self.FPS)
         self.shop = ShopMenu(self.display, self, self.FPS)
         self.pause_menu = PauseMenu(self.display, self, self.FPS)
+        self.settings_menu = SettingsMenu(self.display, self, self.FPS)
 
         self.load_main_menu = True
         self.load_level = False
@@ -30,6 +31,7 @@ class Game():
         self.revive_level = False
         self.load_shop = False
         self.load_pause_menu = False
+        self.load_settings = False
         self.clear_groups = True
 
         self.level_music_playing = True
@@ -37,6 +39,7 @@ class Game():
     def switch_scenes(self):
         """метод для переключения сцен в зависимости от флагов"""
         if self.load_main_menu:
+            self.level.stop_sounds()
             self.main_menu.show()
         elif self.load_level:
             self.level.restart()
@@ -51,10 +54,12 @@ class Game():
             self.shop.show()
         elif self.load_pause_menu:
             self.pause_menu.show()
+        elif self.load_settings:
+            self.settings_menu.show()
 
     def play_music(self):
         """метод для воспроизведения фоновой музыки в зависимости от сцены"""
-        if self.load_main_menu or self.load_shop:
+        if self.load_main_menu or self.load_shop or self.load_settings:
             if self.level_music_playing:
                 pygame.mixer.music.load("assets/music/menu_music.ogg")
                 pygame.mixer.music.set_volume(0.2)
@@ -81,6 +86,8 @@ class Game():
             self.load_shop = True
         elif index == 5:
             self.load_pause_menu = True
+        elif index == 6:
+            self.load_settings = True
         self.clear_groups = clear_groups
 
     def reset_flags(self):
@@ -91,6 +98,7 @@ class Game():
         self.load_shop = False
         self.revive_level = False
         self.load_pause_menu = False
+        self.load_settings = False
 
     def run(self):
         while True:

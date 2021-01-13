@@ -7,12 +7,16 @@ import random
 class GameItem(AnimatedGameObject):
     """Абстрактный класс для игрового предмета"""
     sound = None
+    is_muted = False
 
     def __init__(self, x, y, images, screen_size, sound, volume,
                  convert_alpha=True, create_static=True, colorkey=None):
         super().__init__(x, y, images, screen_size, convert_alpha,
                          create_static, colorkey)
+        self.volume = volume
+        self.volume_ratio = 1
         self.__class__.load_sound(sound, volume)
+        self.update_sound_volume()
         self.activated = False
         self.sound_length = self.sound.get_length()
         self.sound_timer = 0
@@ -48,6 +52,23 @@ class GameItem(AnimatedGameObject):
             self.sound_timer = self.sound_length
         else:
             self.sound_timer -= step
+
+    def mute(self):
+        """метод для заглушения звука"""
+        self.__class__.sound.set_volume(0)
+        self.__class__.is_muted = True
+
+    def unmute(self):
+        """метод для включения звука объекта"""
+        self.__class__.sound.set_volume(self.volume * self.volume_ratio)
+        self.__class__.is_muted = False
+
+    def update_sound_volume(self):
+        """метод для обновления громкости звука предмета"""
+        if (ratio := self.get_game_value(self.VOLUME_KEY)) != -1:
+            self.volume_ratio = ratio
+            self.__class__.sound.set_volume(
+                min(self.volume * self.volume_ratio, 1))
 
 
 class FlyingGameItem(GameItem):

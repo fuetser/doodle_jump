@@ -48,12 +48,12 @@ class Level(GameScene):
         self.min_width = 125
         self.min_height = 50
         self.chunck_height = self.size[1]
-        # вероятности спавна монеток (0, 1)
+        # вероятности спавна монеток (0; 1)
         self.bronze_coin_spawn = 1
         self.silver_coin_spawn = 0
         self.golden_coin_spawn = 0
 
-        # вероятности спавна врагов (0, 1)
+        # вероятности спавна врагов (0; 1)
         self.medusa_spawn = 1
         self.gin_spawn = 0
         self.eye_spawn = 0
@@ -122,6 +122,8 @@ class Level(GameScene):
             item = Rocket(x + 10, y - 35, self.size, self.rocket_upgrade)
         elif 0.8 < value < 0.9 and self.score > 5000:
             item = Hole(x, y, self.size)
+        if item.is_muted:
+            item.unmute()
         return item
 
     def spawn_coin(self, x, y):
@@ -250,6 +252,7 @@ class Level(GameScene):
         """метод для обработки нажатий клавиатуры"""
         if event.key == pygame.K_ESCAPE:
             self.manager.load_scene(5)
+            self.mute_sounds()
             self.close()
         if event.key == pygame.K_a:
             self.move_left = state
@@ -294,15 +297,24 @@ class Level(GameScene):
         """метод для завершения уровня"""
         self.manager.load_scene(2)
         self.lose_sound.play()
-        self.mute_sounds()
+        self.stop_sounds()
         self.close()
 
+    def stop_sounds(self):
+        """метод для остановки всех звуков"""
+        for item in self.items:
+            if hasattr(item, "sound"):
+                item.sound.stop()
+
     def mute_sounds(self):
-        """метод для отсановки всех звуков"""
+        """метод для заглушения всех звуков"""
         for sprite in self.items:
-            if hasattr(sprite, "sound"):
-                sprite.sound.stop()
-        self.main_character.mute()
+            sprite.mute()
+
+    def unmute_sounds(self):
+        """метод для продолжения воспроизведения звуков"""
+        for item in self.items:
+            item.unmute()
 
     def render_score(self):
         """Метод для рендера игрового счета"""
@@ -322,6 +334,7 @@ class Level(GameScene):
     def restart(self):
         """Метод для перезапуска игры"""
         self.reset_values()
+        self.unmute_sounds()
         self.main_character.reset()
         self.platforms.clear()
         self.items.clear()
@@ -354,6 +367,7 @@ class Level(GameScene):
 
     def revive_game(self, clear_groups=True):
         """метод для продолжения игры после проигрыша"""
+        self.unmute_sounds()
         if clear_groups:
             self.enemies.clear()
             for item in self.items:
@@ -371,6 +385,8 @@ class Level(GameScene):
         self.load_upgrades()
         self.main_character.load_upgrades(
             self.damage_upgrade, self.reload_upgrade, self.jump_upgrade)
+        self.main_character.update_particles_amount()
+        self.main_character.update_sound_volume()
         if spawn_chuck:
             self.spawn_chuck()
         super().show()
@@ -383,12 +399,12 @@ class MainMenu(GameScene):
         super(MainMenu, self).__init__(display, manager, fps)
         self.background = pygame.image.load(
             "assets/ui/main_menu_bg.jpg").convert()
-        self.play_button = StaticGameObject(400, 125,
-                                            "assets/ui/play_button.png",
-                                            self.size, convert_alpha=True)
-        self.shop_button = StaticGameObject(400, 190,
-                                            "assets/ui/shop_button.png",
-                                            self.size, convert_alpha=True)
+        self.play_button = StaticGameObject(
+            400, 125, "assets/ui/play_button.png", self.size)
+        self.shop_button = StaticGameObject(
+            400, 200, "assets/ui/shop_button.png", self.size)
+        self.settings_button = StaticGameObject(
+            400, 275, "assets/ui/settings_button.png", self.size)
         self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
         self.click_sound.set_volume(0.4)
 
@@ -396,6 +412,7 @@ class MainMenu(GameScene):
         win.blit(self.background, (0, 0))
         win.blit(self.play_button.image, self.play_button.rect)
         win.blit(self.shop_button.image, self.shop_button.rect)
+        win.blit(self.settings_button.image, self.settings_button.rect)
 
     def handle_events(self):
         for event in pygame.event.get():
@@ -412,11 +429,10 @@ class MainMenu(GameScene):
                     self.manager.load_scene(4)
                     self.click_sound.play()
                     self.close()
-
-    def show(self):
-        self.load_level = False
-        self.load_shop = False
-        super().show()
+                if self.settings_button.collidepoint(event.pos):
+                    self.manager.load_scene(6)
+                    self.click_sound.play()
+                    self.close()
 
 
 class GameOverMenu(GameScene):
@@ -677,7 +693,7 @@ class PauseMenu(GameOverMenu):
     """Класс для создания меню паузы"""
 
     def __init__(self, display, manager, fps):
-        super().__init__(display, manager, fps)
+        super(PauseMenu, self).__init__(display, manager, fps)
         self.background = pygame.image.load("assets/ui/pause_bg.png").convert()
         self.continue_button = StaticGameObject(
             228, 300, "assets/ui/continue_button.png", self.size)
@@ -704,3 +720,101 @@ class PauseMenu(GameOverMenu):
         win.blit(self.background, (50, 50))
         win.blit(self.continue_button.image, self.continue_button.rect)
         win.blit(self.menu_button.image, self.menu_button.rect)
+
+
+class SettingsMenu(GameScene):
+    """Класс для создания меню настроек"""
+
+    def __init__(self, display, manager, fps):
+        super().__init__(display, manager, fps)
+        self.background = pygame.image.load("assets/ui/shop_bg.jpg").convert()
+        self.menu_button = StaticGameObject(
+            50, 525, "assets/ui/menu_button.png", self.size)
+        self.sliders = (
+            Slider(50, 75, self.size),
+            Slider(50, 195, self.size)
+        )
+        self.font = pygame.font.SysFont("cambriacambriamath", 38)
+        self.volume_text = self.font.render("Volume", True, (0, 0, 0))
+        self.particles_text = self.font.render("Particles", True, (0, 0, 0))
+        self.active_slider = 0
+        self.is_drag = False
+        self.PARTICLES_KEY = "particles"
+        self.VOLUME_KEY = "volume"
+        self.click_sound = pygame.mixer.Sound("assets/sounds/button_press.wav")
+        self.click_sound.set_volume(0.4)
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for index, slider in enumerate(self.sliders):
+                    if slider.clicked(event.pos):
+                        self.is_drag = True
+                        self.active_slider = index
+                        break
+                if self.menu_button.collidepoint(event.pos):
+                    self.click_sound.play()
+                    self.manager.load_scene(0)
+                    self.close()
+            if event.type == pygame.MOUSEBUTTONUP and self.is_drag:
+                self.is_drag = False
+                self.apply_settings(self.sliders[self.active_slider].value)
+            if event.type == pygame.MOUSEMOTION and self.is_drag:
+                self.sliders[self.active_slider].process_drag(event.rel)
+
+    def redraw(self, win):
+        win.blit(self.background, (0, 0))
+        win.blit(self.volume_text, (50, 15))
+        win.blit(self.particles_text, (50, 140))
+        for slider in self.sliders:
+            slider.draw(win)
+        win.blit(self.menu_button.image, self.menu_button.rect)
+
+    def apply_settings(self, new_value):
+        if self.active_slider == 0:
+            self.set_game_value(self.VOLUME_KEY, new_value)
+        elif self.active_slider == 1:
+            self.set_game_value(self.PARTICLES_KEY, new_value)
+
+    def show(self):
+        for index, key in enumerate((self.VOLUME_KEY, self.PARTICLES_KEY)):
+            if (value := self.get_game_value(key)) != -1:
+                self.sliders[index].set_value(value)
+        super().show()
+
+
+class Slider(StaticGameObject):
+    """Класс для создания слайдера"""
+
+    def __init__(self, x, y, screen_size):
+        super().__init__(x, y, "assets/ui/slider_bg.png", screen_size)
+        self.handle = StaticGameObject(self.rect.center[0] - 20, y - 2,
+                                       "assets/ui/slider_fg.png", screen_size)
+        self.value = 1  # [0; 2]
+
+    def clicked(self, pos: tuple[int, int]):
+        return self.handle.collidepoint(pos)
+
+    def process_drag(self, drag: tuple[int, int]):
+        if self.x < self.handle.x + drag[0] < self.x + self.rect.w - self.handle.rect.w:
+            self.handle.set_pos((self.handle.x + drag[0], self.handle.y))
+            offset = (self.handle.rect.center[0] + drag[0] - self.x) / self.rect.w * 2
+            self.value = max(offset - 0.1, 0) if drag[0] < 0 else min(offset + 0.1, 2)
+
+    def draw(self, win: pygame.Surface):
+        win.blit(self.image, self.rect)
+        win.blit(self.handle.image, self.handle.rect)
+
+    def set_value(self, new_value: float):
+        if 0 <= new_value <= 2:
+            self.value = new_value
+            x_pos = new_value / 2 * self.rect.w + self.x / 2
+            if x_pos < self.x:
+                x_pos = self.x
+            elif x_pos > self.x + self.rect.w - self.handle.rect.w:
+                x_pos = self.x + self.rect.w - self.handle.rect.w
+            self.handle.set_pos((x_pos, self.handle.y))

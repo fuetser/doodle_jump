@@ -13,7 +13,10 @@ class Enemy(AnimatedGameObject):
     def __init__(self, x, y, images, screen_size, group, sound, volume,
                  convert_alpha=True):
         super().__init__(x, y, images, screen_size, convert_alpha)
-        self.__class__.load_sound(sound, volume)
+        self.volume = volume
+        self.volume_ratio = 1
+        self.update_sound_volume()
+        self.__class__.load_sound(sound, volume, self.volume_ratio)
         self.sound_length = self.sound.get_length()
         self.sound_timer = 0
         self.sound_reload = 0.02
@@ -26,24 +29,24 @@ class Enemy(AnimatedGameObject):
                              (186, 0, 0), (107, 0, 0), (83, 0, 0))
 
     @classmethod
-    def load_sound(cls, sound, volume):
+    def load_sound(cls, sound, volume, ratio):
         """метод для загрузки звука врага"""
         if cls.sound is None:
             cls.sound = pygame.mixer.Sound(sound)
-            cls.sound.set_volume(volume)
-            cls.load_base_sounds()
+            cls.sound.set_volume(min(volume * ratio, 1))
+            cls.load_base_sounds(ratio)
 
     @classmethod
-    def load_base_sounds(cls):
+    def load_base_sounds(cls, ratio):
         """метод для загрузки звуков, общих для всех врагов"""
         if cls.damage_sound is None:
             cls.damage_sound = pygame.mixer.Sound(
                 "assets/sounds/enemy_damage.wav")
-            cls.damage_sound.set_volume(0.2)
+            cls.damage_sound.set_volume(0.2 * ratio)
         if cls.death_sound is None:
             cls.death_sound = pygame.mixer.Sound(
                 "assets/sounds/enemy_death.wav")
-            cls.death_sound.set_volume(0.3)
+            cls.death_sound.set_volume(0.3 * ratio)
 
     def move_h(self):
         self.rect.x += self.horizontal_speed
@@ -77,6 +80,11 @@ class Enemy(AnimatedGameObject):
             self.sound_timer = self.sound_length
         else:
             self.sound_timer -= step
+
+    def update_sound_volume(self):
+        """метод для обновления громкости звука предмета"""
+        if (ratio := self.get_game_value(self.VOLUME_KEY)) != -1:
+            self.volume_ratio = ratio
 
     def delete(self, spawn_coin=False):
         if self.hp <= 0 or spawn_coin:
