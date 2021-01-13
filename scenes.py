@@ -689,3 +689,39 @@ class ShopItem(StaticGameObject):
     def clicked(self, position):
         """метод для проверки нажатия на кнопку"""
         return self.plus_button.collidepoint(position)
+
+
+class PauseMenu(GameOverMenu, Level):
+    """Класс для создания меню паузы"""
+
+    def __init__(self, display, manager, fps):
+        super().__init__(display, manager, fps)
+        self.background = pygame.image.load("assets/ui/pause_bg.png").convert()
+        self.continue_button = StaticGameObject(
+            228, 300, "assets/ui/continue_button.png", self.size)
+        self.menu_button = StaticGameObject(
+            228, 375, "assets/ui/menu_button.png", self.size)
+        self.click_sound = pygame.mixer.Sound("assets/sounds/click.wav")
+        self.click_sound.set_volume(0.4)
+        self.main_character.mute()
+
+    def handle_events(self):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                exit()
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if self.continue_button.collidepoint(event.pos):
+                    self.manager.load_scene(3, clear_groups=False)
+                    self.main_character.unmute()
+                    self.close()
+                if self.menu_button.collidepoint(event.pos):
+                    self.manager.load_scene(0)
+                    self.close()
+
+    def redraw(self, win: pygame.Surface):
+        win.blit(self.background, (50, 50))
+        win.blit(self.continue_button.image, self.continue_button.rect)
+        win.blit(self.menu_button.image, self.menu_button.rect)
+
