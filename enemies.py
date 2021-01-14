@@ -84,7 +84,7 @@ class Enemy(AnimatedGameObject):
         if self.hp <= 0 or spawn_coin:
             coin = HoloCoin(*self.rect.center,
                             (self.screen_width, self.screen_width),
-                            price=self.reward)
+                            price=self.reward, ratio=self.volume_ratio)
             self.group.add(coin)
             self.death_sound.play()
         super().delete()
