@@ -9,14 +9,13 @@ class GameItem(AnimatedGameObject):
     sound = None
     is_muted = False
 
-    def __init__(self, x, y, images, screen_size, sound, volume,
+    def __init__(self, x, y, images, screen_size, sound, volume, ratio=1,
                  convert_alpha=True, create_static=True, colorkey=None):
         super().__init__(x, y, images, screen_size, convert_alpha,
                          create_static, colorkey)
         self.volume = volume
-        self.volume_ratio = 1
-        self.__class__.load_sound(sound, volume)
-        self.update_sound_volume()
+        self.volume_ratio = ratio
+        self.__class__.load_sound(sound, min(volume * ratio, 1))
         self.activated = False
         self.sound_length = self.sound.get_length()
         self.sound_timer = 0
@@ -27,7 +26,7 @@ class GameItem(AnimatedGameObject):
     def load_sound(cls, file, volume):
         if cls.sound is None:
             cls.sound = pygame.mixer.Sound(file)
-            cls.sound.set_volume(volume)
+        cls.sound.set_volume(volume)
 
     def activate(self, player: pygame.sprite.Sprite):
         """метод для применения эффекта предмета игроку"""
@@ -60,24 +59,18 @@ class GameItem(AnimatedGameObject):
 
     def unmute(self):
         """метод для включения звука объекта"""
-        self.__class__.sound.set_volume(self.volume * self.volume_ratio)
+        self.__class__.sound.set_volume(
+            min(self.volume * self.volume_ratio, 2))
         self.__class__.is_muted = False
-
-    def update_sound_volume(self):
-        """метод для обновления громкости звука предмета"""
-        if (ratio := self.get_game_value(self.VOLUME_KEY)) != -1:
-            self.volume_ratio = ratio
-            self.__class__.sound.set_volume(
-                min(self.volume * self.volume_ratio, 1))
 
 
 class FlyingGameItem(GameItem):
     """Абстрактный класс для создания летающих игровых объектов"""
 
-    def __init__(self, x, y, images, screen_size, sound, volume,
+    def __init__(self, x, y, images, screen_size, sound, volume, ratio,
                  convert_alpha=True, lifespan=120, speed=2):
         super().__init__(
-            x, y, images, screen_size, sound, volume, convert_alpha)
+            x, y, images, screen_size, sound, volume, ratio, convert_alpha)
         self.lifespan = lifespan
         self.speed = speed
         self.draw_order = 1
@@ -98,11 +91,11 @@ class FlyingGameItem(GameItem):
 class Spring(GameItem):
     """Класс для создания пружин"""
 
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, ratio):
         images = ("assets/items/spring16_opened.png",
                   "assets/items/spring16.png")
-        super().__init__(
-            x, y, images, screen_size, "assets/sounds/spring.wav", volume=0.25)
+        super().__init__(x, y, images, screen_size, "assets/sounds/spring.wav",
+                         volume=0.25, ratio=ratio)
         self.offset_made = False
 
     def activate(self, player: pygame.sprite.Sprite):
@@ -124,14 +117,15 @@ class Spring(GameItem):
 class PropellerHat(FlyingGameItem):
     """Класс для создания шапки с пропеллером"""
 
-    def __init__(self, x, y, screen_size, upgrade=None):
+    def __init__(self, x, y, screen_size, ratio, upgrade=None):
         images = ["assets/items/hat32.png"]
         images += [f"assets/items/hat/{image}" for image in os.listdir(
             "assets/items/hat")]
         speed = upgrade[0] if upgrade is not None else 2
         lifespan = upgrade[1] if upgrade is not None else 180
-        super().__init__(x, y, images, screen_size, "assets/sounds/hat.wav",
-                         volume=0.6, lifespan=lifespan, speed=speed)
+        super().__init__(
+            x, y, images, screen_size, "assets/sounds/hat.wav", volume=0.6,
+            ratio=ratio, lifespan=lifespan, speed=speed)
         self.colors = ((64, 64, 64), (128, 128, 128), (192, 192, 192))
 
     def update(self, *args, **kwargs):
@@ -156,10 +150,11 @@ class PropellerHat(FlyingGameItem):
 class Trampoline(GameItem):
     """Класс для создания трамплина"""
 
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, ratio):
         images = ["assets/items/trampoline64.png"] * 2
         super().__init__(x, y, images, screen_size,
-                         "assets/sounds/trampoline.wav", volume=0.25)
+                         "assets/sounds/trampoline.wav",
+                         volume=0.25, ratio=ratio)
 
     def activate(self, player: pygame.sprite.Sprite):
         self.sound.play()
@@ -171,14 +166,15 @@ class Trampoline(GameItem):
 class Jetpack(FlyingGameItem):
     """Класс для создание джетпака"""
 
-    def __init__(self, x, y, screen_size, upgrade=None):
+    def __init__(self, x, y, screen_size, ratio, upgrade=None):
         images = ["assets/items/jetpack48.png"]
         images += [f"assets/items/jetpack/{image}" for image in os.listdir(
             "assets/items/jetpack")]
         speed = upgrade[0] if upgrade is not None else 3
         lifespan = upgrade[1] if upgrade is not None else 240
-        super().__init__(x, y, images, screen_size, "assets/sounds/jetpack.wav",
-                         volume=0.25, lifespan=lifespan, speed=speed)
+        super().__init__(x, y, images, screen_size,
+                         "assets/sounds/jetpack.wav", volume=0.25,
+                         ratio=ratio, lifespan=lifespan, speed=speed)
         self.image = self.static_image
         self.facing_right = True
         self.colors = ((255, 77, 0), (255, 157, 0), (255, 234, 0))
@@ -215,11 +211,12 @@ class Jetpack(FlyingGameItem):
 class Coin(GameItem):
     """Абстрактный класс для создания монеток"""
 
-    def __init__(self, x, y, folder, screen_size, price, ignore_scroll=False):
+    def __init__(self, x, y, folder, screen_size, price, ratio,
+                 ignore_scroll=False):
         images = [f"{folder}/{image}" for image in os.listdir(folder)
                   for _ in range(3)]
         super().__init__(x, y, images, screen_size, "assets/sounds/coin.wav",
-                         volume=0.3, create_static=False)
+                         volume=0.3, ratio=ratio, create_static=False)
         self.price = price
         self.ignore_scroll = ignore_scroll
         self.is_magnetized = False
@@ -260,36 +257,36 @@ class Coin(GameItem):
 class BronzeCoin(Coin):
     """Класс для создания бронзовых монеток"""
 
-    def __init__(self, x, y, screen_size, ignore_scroll=False):
+    def __init__(self, x, y, screen_size, ratio, ignore_scroll=False):
         super().__init__(x, y, "assets/items/bronze_coin", screen_size,
-                         price=1, ignore_scroll=ignore_scroll)
+                         price=1, ratio=ratio, ignore_scroll=ignore_scroll)
         self.colors = ((205, 127, 50), (110, 58, 7), (195, 131, 79))
 
 
 class SilverCoin(Coin):
     """Класс для создания серебрянных монеток"""
 
-    def __init__(self, x, y, screen_size, ignore_scroll=False):
+    def __init__(self, x, y, screen_size, ratio, ignore_scroll=False):
         super().__init__(x, y, "assets/items/silver_coin", screen_size,
-                         price=5, ignore_scroll=ignore_scroll)
+                         price=5, ratio=ratio, ignore_scroll=ignore_scroll)
         self.colors = ((208, 210, 209), (168, 169, 173), (117, 117, 117))
 
 
 class GoldenCoin(Coin):
     """Класс для создания золотых монеток"""
 
-    def __init__(self, x, y, screen_size, ignore_scroll=False):
+    def __init__(self, x, y, screen_size, ratio, ignore_scroll=False):
         super().__init__(x, y, "assets/items/golden_coin", screen_size,
-                         price=10, ignore_scroll=ignore_scroll)
+                         price=10, ratio=ratio, ignore_scroll=ignore_scroll)
         self.colors = ((255, 215, 0), (229, 146, 2), (255, 247, 122))
 
 
 class HoloCoin(Coin):
     """Класс для создания голографических монеток"""
 
-    def __init__(self, x, y, screen_size, price=50, ignore_scroll=False):
+    def __init__(self, x, y, screen_size, ratio, price=50, ignore_scroll=False):
         super().__init__(x, y, "assets/items/holo_coin", screen_size,
-                         price=price, ignore_scroll=ignore_scroll)
+                         price=price, ratio=ratio, ignore_scroll=ignore_scroll)
         self.colors = ((107, 210, 255), (172, 180, 252), (253, 207, 191),
                        (253, 107, 182), (228, 98, 248), (139, 124, 241))
 
@@ -297,12 +294,12 @@ class HoloCoin(Coin):
 class Shield(GameItem):
     """Класс для создания щита"""
 
-    def __init__(self, x, y, screen_size, upgrade=None):
+    def __init__(self, x, y, screen_size, ratio, upgrade=None):
         images = ["assets/items/shield32.png"]
         images += [f"assets/items/shield/{image}" for image in os.listdir(
             "assets/items/shield") for _ in range(3)]
         super().__init__(x, y, images, screen_size,
-                         "assets/sounds/shield.wav", volume=0.4)
+                         "assets/sounds/shield.wav", volume=0.4, ratio=ratio)
         self.lifespan = upgrade if upgrade is not None else 240
         self.image = self.static_image
         self.collect_with_item = True
@@ -333,12 +330,12 @@ class Shield(GameItem):
 class Magnet(GameItem):
     """Класс для создания магнита"""
 
-    def __init__(self, x, y, screen_size, upgrade=None):
+    def __init__(self, x, y, screen_size, ratio, upgrade=None):
         images = ["assets/items/magnet32.png"]
         images += [f"assets/items/magnet/{image}" for image in os.listdir(
             "assets/items/magnet") for _ in range(2)]
         super().__init__(x, y, images, screen_size,
-                         "assets/sounds/magnet.wav", volume=0.4)
+                         "assets/sounds/magnet.wav", volume=0.4, ratio=ratio)
         self.diameter = upgrade[0] if upgrade is not None else 150
         self.lifespan = upgrade[1] if upgrade is not None else 240
         self.image = self.static_image
@@ -373,11 +370,11 @@ class Magnet(GameItem):
 class Hole(GameItem):
     """Класс для создпния дыры"""
 
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, ratio):
         images = [f"assets/items/hole/{image}" for image in os.listdir(
             "assets/items/hole") for _ in range(3)]
         super().__init__(x, y, images, screen_size, "assets/sounds/hole.wav",
-                         volume=0.5)
+                         volume=0.5, ratio=ratio)
         self.colors = ((254, 0, 246), (69, 0, 169), (46, 0, 108), (30, 0, 70))
         self.collect_with_item = True
         self.sound.play()
@@ -399,13 +396,14 @@ class Hole(GameItem):
 class Rocket(FlyingGameItem):
     """Класс для создания ракеты"""
 
-    def __init__(self, x, y, screen_size, upgrade=None):
+    def __init__(self, x, y, screen_size, ratio, upgrade=None):
         images = ("assets/items/rocket/static_rocket.png",
                   "assets/items/rocket/rocket.png")
         speed = upgrade[0] if upgrade is not None else 10
         lifespan = upgrade[1] if upgrade is not None else 180
-        super().__init__(x, y, images, screen_size, "assets/sounds/jetpack.wav",
-                         volume=0.35, lifespan=lifespan, speed=speed)
+        super().__init__(x, y, images, screen_size,
+                         "assets/sounds/jetpack.wav", volume=0.35,
+                         ratio=ratio, lifespan=lifespan, speed=speed)
         self.image = self.static_image
         self.facing_right = False
 

@@ -71,17 +71,16 @@ class BreakingPlatform(Platform):
     """Класс для создания разрушающихся платформ"""
     sound = None
 
-    def __init__(self, x, y, screen_size):
+    def __init__(self, x, y, screen_size, ratio):
         super().__init__(
             x, y, "assets/platforms/breaking_platform.png", screen_size)
         self.colors = ((210, 165, 109), (206, 139, 84), (189, 126, 74),
                        (150, 97, 61), (131, 80, 46))
-        self.volume_ratio = 1
+        self.volume_ratio = ratio
         if self.__class__.sound is None:
             self.__class__.sound = pygame.mixer.Sound(
                 "assets/sounds/platform_break.wav")
-            self.__class__.sound.set_volume(min(0.55 * self.volume_ratio, 1))
-        self.update_sound_volume()
+        self.__class__.sound.set_volume(min(0.55 * self.volume_ratio, 1))
 
     def activate(self, player: pygame.sprite.Sprite):
         self.delete()
@@ -90,9 +89,3 @@ class BreakingPlatform(Platform):
             color = random.choice(self.colors)
             player.spawn_particles(amount=2, momentum=random.randrange(0, 3),
                                    radius=random.randrange(4, 10), color=color)
-
-    def update_sound_volume(self):
-        """метод для обновления громкости звука предмета"""
-        if (ratio := self.get_game_value(self.VOLUME_KEY)) != -1:
-            self.volume_ratio = ratio
-            self.__class__.sound.set_volume(min(0.55 * self.volume_ratio, 1))

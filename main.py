@@ -1,3 +1,4 @@
+import json
 import pygame
 from scenes import *
 
@@ -35,6 +36,26 @@ class Game():
         self.clear_groups = True
 
         self.level_music_playing = True
+        self.MUSIC_KEY = "music"
+        self.volume_ratio = 1
+
+    def update_sound_volume(self):
+        """метод для получения громкости звука"""
+        try:
+            with open("values.json", "r", encoding="u8") as f:
+                data = json.load(f)
+        except Exception as err:
+            print(err)
+            self.volume_ratio = 1
+        else:
+            self.volume_ratio = data.get(self.MUSIC_KEY, 1)
+
+    def apply_sound_volume(self):
+        """метод для установки громкости музыки"""
+        if self.level_music_playing:
+            pygame.mixer.music.set_volume(0.2 * self.volume_ratio)
+        else:
+            pygame.mixer.music.set_volume(0.25 * self.volume_ratio)
 
     def switch_scenes(self):
         """метод для переключения сцен в зависимости от флагов"""
@@ -62,12 +83,12 @@ class Game():
         if self.load_main_menu or self.load_shop or self.load_settings:
             if self.level_music_playing:
                 pygame.mixer.music.load("assets/music/menu_music.ogg")
-                pygame.mixer.music.set_volume(0.2)
+                pygame.mixer.music.set_volume(0.2 * self.volume_ratio)
                 pygame.mixer.music.play(-1)
                 self.level_music_playing = False
         elif not self.level_music_playing:
             pygame.mixer.music.load("assets/music/level_music.mp3")
-            pygame.mixer.music.set_volume(0.25)
+            pygame.mixer.music.set_volume(0.25 * self.volume_ratio)
             pygame.mixer.music.play(-1)
             self.level_music_playing = True
 
@@ -89,6 +110,8 @@ class Game():
         elif index == 6:
             self.load_settings = True
         self.clear_groups = clear_groups
+        self.update_sound_volume()
+        self.apply_sound_volume()
 
     def reset_flags(self):
         """метод для сброса значений флагов загрузки сцен"""
@@ -101,6 +124,8 @@ class Game():
         self.load_settings = False
 
     def run(self):
+        self.update_sound_volume()
+        self.apply_sound_volume()
         while True:
             self.play_music()
             self.switch_scenes()

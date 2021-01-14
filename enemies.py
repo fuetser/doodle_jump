@@ -11,11 +11,10 @@ class Enemy(AnimatedGameObject):
     death_sound = None
 
     def __init__(self, x, y, images, screen_size, group, sound, volume,
-                 convert_alpha=True):
+                 ratio=1, convert_alpha=True):
         super().__init__(x, y, images, screen_size, convert_alpha)
         self.volume = volume
-        self.volume_ratio = 1
-        self.update_sound_volume()
+        self.volume_ratio = ratio
         self.__class__.load_sound(sound, volume, self.volume_ratio)
         self.sound_length = self.sound.get_length()
         self.sound_timer = 0
@@ -81,11 +80,6 @@ class Enemy(AnimatedGameObject):
         else:
             self.sound_timer -= step
 
-    def update_sound_volume(self):
-        """метод для обновления громкости звука предмета"""
-        if (ratio := self.get_game_value(self.VOLUME_KEY)) != -1:
-            self.volume_ratio = ratio
-
     def delete(self, spawn_coin=False):
         if self.hp <= 0 or spawn_coin:
             coin = HoloCoin(*self.rect.center,
@@ -100,11 +94,12 @@ class Enemy(AnimatedGameObject):
 
 
 class FlyingEye(Enemy):
-    def __init__(self, x, y, screen_size, group):
+    def __init__(self, x, y, screen_size, group, ratio):
         images = [f"assets/enemies/eye/{image}" for image in os.listdir(
             "assets/enemies/eye")]
         super().__init__(x, y, images, screen_size, group,
-                         "assets/sounds/monster_sound.wav", volume=0.4)
+                         "assets/sounds/monster_sound.wav",
+                         volume=0.4, ratio=ratio)
         self.hp = 200
         self.reward = 200
         self.facing_right = False
@@ -114,11 +109,11 @@ class FlyingEye(Enemy):
 class Dragon(Enemy):
     """Класс для создания дракона"""
 
-    def __init__(self, x, y, screen_size, group):
+    def __init__(self, x, y, screen_size, group, ratio):
         images = [f"assets/enemies/dragon/{image}" for image in os.listdir(
             "assets/enemies/dragon") for _ in range(4)]
         super().__init__(x, y, images, screen_size, group,
-                         "assets/sounds/dragon.wav", volume=0.2)
+                         "assets/sounds/dragon.wav", volume=0.2, ratio=ratio)
         self.horizontal_speed = 6
         self.reward = 300
         self.hp = 300
@@ -127,11 +122,11 @@ class Dragon(Enemy):
 class Medusa(Enemy):
     """Класс для создания медузы"""
 
-    def __init__(self, x, y, screen_size, group):
+    def __init__(self, x, y, screen_size, group, ratio):
         images = [f"assets/enemies/medusa/{image}" for image in os.listdir(
             "assets/enemies/medusa") for _ in range(4)]
         super().__init__(x, y, images, screen_size, group,
-                         "assets/sounds/medusa.wav", volume=0.2)
+                         "assets/sounds/medusa.wav", volume=0.2, ratio=ratio)
         self.horizontal_speed = 3
         self.blood_colors = ((103, 197, 10), (255, 217, 0), (124, 215, 194),
                              (5, 78, 111), (20, 20, 20))
@@ -140,11 +135,11 @@ class Medusa(Enemy):
 class Gin(Enemy):
     """Класс для создания медузы"""
 
-    def __init__(self, x, y, screen_size, group):
+    def __init__(self, x, y, screen_size, group, ratio):
         images = [f"assets/enemies/gin/{image}" for image in os.listdir(
             "assets/enemies/gin") for _ in range(5)]
         super().__init__(x, y, images, screen_size, group,
-                         "assets/sounds/gin.wav", volume=0.2)
+                         "assets/sounds/gin.wav", volume=0.2, ratio=ratio)
         self.sound_reload = 0.03
         self.horizontal_speed = 5
         self.reward = 150

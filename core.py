@@ -156,8 +156,10 @@ class GameScene():
         self.clock = pygame.time.Clock()
         self.size = (self.display.get_width(), self.display.get_height())
         self.running = True
+        self.volume_ratio = 1
         #  мэнэджер загрузки сцен
         self.manager = manager
+        #  ключи для изменения значений в json файле
         self.HIGHSCORE_KEY = "highscore"
         self.MONEY_KEY = "money"
         self.MAGNET_KEY = "magnet"
@@ -168,6 +170,7 @@ class GameScene():
         self.RELOAD_KEY = "reload"
         self.JUMP_KEY = "jump"
         self.ROCKET_KEY = "rocket"
+        self.VOLUME_KEY = "volume"
 
     def redraw(self, win: pygame.Surface):
         """метод для отрисовки на заданной поверхности"""
@@ -214,6 +217,11 @@ class GameScene():
             result = data.get(key, -1)
         finally:
             return result
+
+    def update_sound_volume(self):
+        """метод для обновления громкости звуков сцены"""
+        if (ratio := self.get_game_value(self.VOLUME_KEY)) != -1:
+            self.volume_ratio = ratio
 
     def load_upgrades_levels(self):
         """метод для получения уровней предметов"""
