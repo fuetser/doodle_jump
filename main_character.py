@@ -297,6 +297,7 @@ class Bullet(StaticGameObject):
         self.speed_x = 0
         self.speed_y = 0
         self.speed_coefficient = 10
+        self.lifespan = 150
 
     @classmethod
     def load_image(cls, image_path, convert_alpha):
@@ -314,7 +315,8 @@ class Bullet(StaticGameObject):
     def update(self):
         self.rect.x -= self.speed_x
         self.rect.y -= self.speed_y
+        self.lifespan -= 1
         condition1 = self.x > self.screen_width or self.y > self.screen_height
         condition2 = self.x < self.rect.width or self.x < self.rect.height
-        if condition1 or condition2:
+        if condition1 or condition2 or self.lifespan <= 0:
             self.delete()
